@@ -316,7 +316,8 @@ function ProviderModal({ show, provider, onClose, onSave }: ProviderModalProps) 
     const [connectionTested, setConnectionTested] = useState(false);
     const [speedTested, setSpeedTested] = useState(false);
     const [testLatency, setTestLatency] = useState<number | null>(null);
-    const [testSpeedMBps, setTestSpeedMBps] = useState<number | null>(null);
+    const [testSpeedTotal, setTestSpeedTotal] = useState<number | null>(null);
+    const [testSpeedPerConnection, setTestSpeedPerConnection] = useState<number | null>(null);
     const [testError, setTestError] = useState<string | null>(null);
 
     // Reset form when modal opens or provider changes
@@ -333,7 +334,8 @@ function ProviderModal({ show, provider, onClose, onSave }: ProviderModalProps) 
             setConnectionTested(false);
             setSpeedTested(false);
             setTestLatency(null);
-            setTestSpeedMBps(null);
+            setTestSpeedTotal(null);
+            setTestSpeedPerConnection(null);
             setTestError(null);
         }
     }, [show, provider]);
@@ -357,7 +359,8 @@ function ProviderModal({ show, provider, onClose, onSave }: ProviderModalProps) 
         setTestError(null);
         setTestLatency(null);
         setSpeedTested(false);
-        setTestSpeedMBps(null);
+        setTestSpeedTotal(null);
+        setTestSpeedPerConnection(null);
 
         try {
             const formData = new FormData();
@@ -395,9 +398,8 @@ function ProviderModal({ show, provider, onClose, onSave }: ProviderModalProps) 
     const handleTestSpeed = useCallback(async () => {
         setIsTestingSpeed(true);
         setTestError(null);
-        setTestSpeedMBps(null);
-        setConnectionTested(false);
-        setTestLatency(null);
+        setTestSpeedTotal(null);
+        setTestSpeedPerConnection(null);
 
         try {
             const formData = new FormData();
@@ -417,7 +419,8 @@ function ProviderModal({ show, provider, onClose, onSave }: ProviderModalProps) 
                 const data = await response.json();
                 if (data.success) {
                     setSpeedTested(true);
-                    setTestSpeedMBps(data.speedMBps);
+                    setTestSpeedTotal(data.speedMBps);
+                    setTestSpeedPerConnection(data.speedMBpsPerConnection);
                     setTestError(null);
                 } else {
                     setTestError("Speed test failed to run or complete");
@@ -629,7 +632,10 @@ function ProviderModal({ show, provider, onClose, onSave }: ProviderModalProps) 
 
                     {speedTested && (
                         <div className={`${styles.alert} ${styles["alert-success"]}`} style={{ marginTop: '16px' }}>
-                            Speed test successful! {testSpeedMBps !== null && `(Speed: ${testSpeedMBps} MB/s)`}
+                            Speed test successful! {testSpeedPerConnection !== null && `(Speed: ${testSpeedPerConnection} MB/s per connection | ${testSpeedTotal} MB/s total)`}
+                            <div style={{ fontSize: '0.85em', marginTop: '4px', opacity: 0.8 }}>
+                                * Speedtest measures download speed by fetching a 100MB test file.
+                            </div>
                         </div>
                     )}
                 </div>

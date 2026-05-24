@@ -85,11 +85,14 @@ public class TestUsenetSpeedController() : BaseApiController
 
             var totalMegabytes = totalBytesDownloaded / 1024.0 / 1024.0;
             var speedMBps = totalMegabytes / sw.Elapsed.TotalSeconds;
+            var perConnectionSpeed = speedMBps / maxConnections;
 
             return new TestUsenetSpeedResponse 
             { 
                 Success = true, 
-                SpeedMBps = Math.Round(speedMBps, 2) 
+                SpeedMBps = Math.Round(speedMBps, 2),
+                SpeedMBpsPerConnection = Math.Round(perConnectionSpeed, 2),
+                ConnectionsUsed = maxConnections
             };
         }
         catch (Exception e) when (e is not OperationCanceledException)
