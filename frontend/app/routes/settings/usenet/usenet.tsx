@@ -312,8 +312,11 @@ function ProviderModal({ show, provider, onClose, onSave }: ProviderModalProps) 
     const [priority, setPriority] = useState(provider?.Priority?.toString() || "0");
     const [type, setType] = useState<ProviderType>(provider?.Type ?? ProviderType.Pooled);
     const [isTestingConnection, setIsTestingConnection] = useState(false);
+    const [isTestingSpeed, setIsTestingSpeed] = useState(false);
     const [connectionTested, setConnectionTested] = useState(false);
+    const [speedTested, setSpeedTested] = useState(false);
     const [testLatency, setTestLatency] = useState<number | null>(null);
+    const [testSpeedMBps, setTestSpeedMBps] = useState<number | null>(null);
     const [testError, setTestError] = useState<string | null>(null);
 
     // Reset form when modal opens or provider changes
@@ -328,7 +331,9 @@ function ProviderModal({ show, provider, onClose, onSave }: ProviderModalProps) 
             setPriority(provider?.Priority?.toString() ?? "0");
             setType(provider?.Type ?? ProviderType.Pooled);
             setConnectionTested(false);
+            setSpeedTested(false);
             setTestLatency(null);
+            setTestSpeedMBps(null);
             setTestError(null);
         }
     }, [show, provider]);
@@ -351,6 +356,8 @@ function ProviderModal({ show, provider, onClose, onSave }: ProviderModalProps) 
         setIsTestingConnection(true);
         setTestError(null);
         setTestLatency(null);
+        setSpeedTested(false);
+        setTestSpeedMBps(null);
 
         try {
             const formData = new FormData();
@@ -359,6 +366,7 @@ function ProviderModal({ show, provider, onClose, onSave }: ProviderModalProps) 
             formData.append('use-ssl', useSsl.toString());
             formData.append('user', user);
             formData.append('pass', pass);
+            formData.append('max-connections', maxConnections);
 
             const response = await fetch('/api/test-usenet-connection', {
                 method: 'POST',
@@ -382,7 +390,47 @@ function ProviderModal({ show, provider, onClose, onSave }: ProviderModalProps) 
         } finally {
             setIsTestingConnection(false);
         }
-    }, [host, port, useSsl, user, pass]);
+    }, [host, port, useSsl, user, pass, maxConnections]);
+
+    const handleTestSpeed = useCallback(async () => {
+        setIsTestingSpeed(true);
+        setTestError(null);
+        setTestSpeedMBps(null);
+        setConnectionTested(false);
+        setTestLatency(null);
+
+        try {
+            const formData = new FormData();
+            formData.append('host', host);
+            formData.append('port', port);
+            formData.append('use-ssl', useSsl.toString());
+            formData.append('user', user);
+            formData.append('pass', pass);
+            formData.append('max-connections', maxConnections);
+
+            const response = await fetch('/api/test-usenet-speed', {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    setSpeedTested(true);
+                    setTestSpeedMBps(data.speedMBps);
+                    setTestError(null);
+                } else {
+                    setTestError("Speed test failed to run or complete");
+                }
+            } else {
+                setTestError("Failed to initiate speed test");
+            }
+        } catch (error) {
+            setTestError("Network error: " + (error instanceof Error ? error.message : "Unknown error"));
+        } finally {
+            setIsTestingSpeed(false);
+        }
+    }, [host, port, useSsl, user, pass, maxConnections]);
 
     const handleSave = useCallback(() => {
         onSave({
@@ -410,7 +458,7 @@ function ProviderModal({ show, provider, onClose, onSave }: ProviderModalProps) 
         && isPositiveInteger(maxConnections)
         && (priority === "" || isInteger(priority));
 
-    const canSave = isFormValid && (connectionTested || type == ProviderType.Disabled);
+    const canSave = isFormValid && (connectionTested || speedTested || type == ProviderType.Disabled);
 
     if (!show) return null;
 
@@ -441,6 +489,7 @@ function ProviderModal({ show, provider, onClose, onSave }: ProviderModalProps) 
                                 onChange={(e) => {
                                     setHost(e.target.value);
                                     setConnectionTested(false);
+                                    setSpeedTested(false);
                                 }}
                             />
                         </div>
@@ -458,6 +507,7 @@ function ProviderModal({ show, provider, onClose, onSave }: ProviderModalProps) 
                                 onChange={(e) => {
                                     setPort(e.target.value);
                                     setConnectionTested(false);
+                                    setSpeedTested(false);
                                 }}
                             />
                         </div>
@@ -475,6 +525,7 @@ function ProviderModal({ show, provider, onClose, onSave }: ProviderModalProps) 
                                 onChange={(e) => {
                                     setUser(e.target.value);
                                     setConnectionTested(false);
+                                    setSpeedTested(false);
                                 }}
                             />
                         </div>
@@ -492,6 +543,7 @@ function ProviderModal({ show, provider, onClose, onSave }: ProviderModalProps) 
                                 onChange={(e) => {
                                     setPass(e.target.value);
                                     setConnectionTested(false);
+                                    setSpeedTested(false);
                                 }}
                             />
                         </div>
@@ -506,7 +558,10 @@ function ProviderModal({ show, provider, onClose, onSave }: ProviderModalProps) 
                                 className={`${styles["form-input"]} ${!isPositiveInteger(maxConnections) && maxConnections !== "" ? styles.error : ""}`}
                                 placeholder="20"
                                 value={maxConnections}
-                                onChange={(e) => setMaxConnections(e.target.value)}
+                                onChange={(e) => {
+                                    setMaxConnections(e.target.value);
+                                    setSpeedTested(false);
+                                }}
                             />
                         </div>
 
@@ -550,6 +605,7 @@ function ProviderModal({ show, provider, onClose, onSave }: ProviderModalProps) 
                                     onChange={(e) => {
                                         setUseSsl(e.target.checked);
                                         setConnectionTested(false);
+                                        setSpeedTested(false);
                                     }}
                                 />
                                 <label htmlFor="provider-ssl" className={styles["form-checkbox-label"]}>
@@ -570,6 +626,12 @@ function ProviderModal({ show, provider, onClose, onSave }: ProviderModalProps) 
                             Connection test successful! {testLatency !== null && `(Latency: ${testLatency}ms)`}
                         </div>
                     )}
+
+                    {speedTested && (
+                        <div className={`${styles.alert} ${styles["alert-success"]}`} style={{ marginTop: '16px' }}>
+                            Speed test successful! {testSpeedMBps !== null && `(Speed: ${testSpeedMBps} MB/s)`}
+                        </div>
+                    )}
                 </div>
 
                 <div className={styles["modal-footer"]}>
@@ -579,13 +641,23 @@ function ProviderModal({ show, provider, onClose, onSave }: ProviderModalProps) 
                             Cancel
                         </Button>
                         {!canSave ? (
-                            <Button
-                                variant="primary"
-                                onClick={handleTestConnection}
-                                disabled={!isFormValid || isTestingConnection}
-                            >
-                                {isTestingConnection ? "Testing..." : "Test Connection"}
-                            </Button>
+                            <>
+                                <Button
+                                    variant="primary"
+                                    onClick={handleTestConnection}
+                                    disabled={!isFormValid || isTestingConnection || isTestingSpeed}
+                                >
+                                    {isTestingConnection ? "Testing..." : "Test Connection"}
+                                </Button>
+                                <Button
+                                    variant="info"
+                                    onClick={handleTestSpeed}
+                                    disabled={!isFormValid || isTestingSpeed || isTestingConnection}
+                                    style={{ marginLeft: '8px' }}
+                                >
+                                    {isTestingSpeed ? "Testing..." : "Test Speed"}
+                                </Button>
+                            </>
                         ) : (
                             <Button variant="primary" onClick={handleSave} disabled={!canSave}>
                                 Save Provider

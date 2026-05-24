@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using NzbWebDAV.Config;
 using NzbWebDAV.Models;
 
@@ -29,6 +29,8 @@ public class TestUsenetConnectionRequest
         var useSsl = context.Request.Form["use-ssl"].FirstOrDefault()
                      ?? throw new BadHttpRequestException("Usenet use-ssl is required");
 
+        var maxConnectionsStr = context.Request.Form["max-connections"].FirstOrDefault();
+
         Port = !int.TryParse(port, out int portValue)
             ? throw new BadHttpRequestException("Invalid usenet port")
             : portValue;
@@ -36,7 +38,11 @@ public class TestUsenetConnectionRequest
         UseSsl = !bool.TryParse(useSsl, out bool useSslValue)
             ? throw new BadHttpRequestException("Invalid use-ssl value")
             : useSslValue;
+
+        MaxConnections = int.TryParse(maxConnectionsStr, out int maxConnValue) ? maxConnValue : 1;
     }
+
+    public int MaxConnections { get; init; }
 
     public UsenetProviderConfig.ConnectionDetails ToConnectionDetails()
     {
@@ -47,7 +53,7 @@ public class TestUsenetConnectionRequest
             Pass = Pass,
             Port = Port,
             UseSsl = UseSsl,
-            MaxConnections = 1,
+            MaxConnections = MaxConnections,
             Type = ProviderType.Disabled
         };
     }
