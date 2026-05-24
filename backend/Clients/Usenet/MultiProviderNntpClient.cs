@@ -167,12 +167,23 @@ public class MultiProviderNntpClient(List<MultiConnectionNntpClient> providers) 
             .Where(x => x.ProviderType != ProviderType.Disabled)
             .ToList();
 
-        List<MultiConnectionNntpClient> ordered;
+        // Backups are always last, ordered by type (BackupAndStats before BackupOnly) then priority
+        var backups = enabled
+            .Where(x => x.ProviderType != ProviderType.Pooled)
+            .OrderBy(x => x.ProviderType)
+            .ThenBy(x => x.Priority)
+            .ThenByDescending(x => x.AvailableConnections)
+            .ToList();
+
+        List<MultiConnectionNntpClient> pooled;
         if (useStreamingPriority)
         {
-            // Streaming: respect user's priority preferences within pooled providers
-            ordered = enabled
-                .OrderBy(x => x.ProviderType)
+            // Streaming: fill up priority-0 providers first, only overflow to higher
+            // priority tiers when all lower-priority providers are fully saturated.
+            // Among providers at the same priority, prefer the one with most free connections.
+            pooled = enabled
+                .Where(x => x.ProviderType == ProviderType.Pooled)
+                .OrderBy(x => x.AvailableConnections > 0 ? 0 : 1)
                 .ThenBy(x => x.Priority)
                 .ThenByDescending(x => x.AvailableConnections)
                 .ToList();
@@ -180,19 +191,16 @@ public class MultiProviderNntpClient(List<MultiConnectionNntpClient> providers) 
         else
         {
             // Health checks / imports: spread load across all pooled providers equally,
-            // then fall back to backup providers in priority order
-            var pooled = enabled
+            // routed to whichever has the most available connections right now.
+            pooled = enabled
                 .Where(x => x.ProviderType == ProviderType.Pooled)
                 .OrderByDescending(x => x.AvailableConnections)
                 .ToList();
-            var backups = enabled
-                .Where(x => x.ProviderType != ProviderType.Pooled)
-                .OrderBy(x => x.ProviderType)
-                .ThenBy(x => x.Priority)
-                .ThenByDescending(x => x.AvailableConnections)
-                .ToList();
-            ordered = [..pooled, ..backups];
         }
+
+        var ordered = new List<MultiConnectionNntpClient>(pooled.Count + backups.Count);
+        ordered.AddRange(pooled);
+        ordered.AddRange(backups);
 
         var healthy = ordered.Where(x => !x.IsTripped).ToList();
 
