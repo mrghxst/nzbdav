@@ -48,3 +48,8 @@
     color: #657b83;
     margin-bottom: 8px;
 }
+
+.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}

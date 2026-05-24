@@ -130,7 +130,9 @@ public abstract class NntpClient : INntpClient
         var processed = 0;
         await foreach (var task in tasks.ConfigureAwait(false))
         {
-            progress?.Report(++processed);
+            processed++;
+            var simulatedProgress = (int)Math.Round((double)processed / segmentsToCheck.Count * allSegments.Count);
+            progress?.Report(simulatedProgress);
             if (task.Result.ResponseType == UsenetResponseType.ArticleExists) continue;
             await childCt.CancelAsync().ConfigureAwait(false);
             throw new UsenetArticleNotFoundException(task.SegmentId);

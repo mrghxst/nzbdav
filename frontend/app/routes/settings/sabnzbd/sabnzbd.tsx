@@ -209,38 +209,37 @@ export function SabnzbdSettings({ config, setNewConfig, appVersion }: SabnzbdSet
                     value={config["api.ensure-article-existence-categories"] ?? ""}
                     onChange={value => setNewConfig({ ...config, "api.ensure-article-existence-categories": value })}
                 />
-                {!ensureArticleExistanceSetting.areNoneSelected && (
-                    <div className={styles.subGroup}>
-                        <label htmlFor="import-verification-percent-input" className={styles.sliderLabel}>
-                            Segment Verification Depth
-                            <span className={styles.sliderValue}>
-                                {config["api.import-verification-percent"]}%
-                            </span>
-                        </label>
-                        <input
-                            type="range"
-                            className={styles.sliderInput}
-                            id="import-verification-percent-input"
-                            aria-describedby="import-verification-percent-help"
-                            min={1}
-                            max={100}
-                            step={1}
-                            value={config["api.import-verification-percent"]}
-                            onChange={e => setNewConfig({
-                                ...config,
-                                "api.import-verification-percent": e.target.value
-                            })}
-                        />
-                        <div className={styles.sliderLabels}>
-                            <span>FAST (1%)</span>
-                            <span>BALANCED (50%)</span>
-                            <span>DEEP (100%)</span>
-                        </div>
-                        <Form.Text id="import-verification-percent-help" muted>
-                            Percentage of usenet segments to validate before import. Lower values are faster but less thorough.
-                        </Form.Text>
+                <div className={styles.subGroup}>
+                    <label htmlFor="import-verification-percent-input" className={className([styles.sliderLabel, ensureArticleExistanceSetting.areNoneSelected && styles.disabled])}>
+                        Segment Verification Depth
+                        <span className={styles.sliderValue}>
+                            {config["api.import-verification-percent"]}%
+                        </span>
+                    </label>
+                    <input
+                        type="range"
+                        className={styles.sliderInput}
+                        id="import-verification-percent-input"
+                        aria-describedby="import-verification-percent-help"
+                        min={1}
+                        max={100}
+                        step={1}
+                        disabled={ensureArticleExistanceSetting.areNoneSelected}
+                        value={config["api.import-verification-percent"]}
+                        onChange={e => setNewConfig({
+                            ...config,
+                            "api.import-verification-percent": e.target.value
+                        })}
+                    />
+                    <div className={className([styles.sliderLabels, ensureArticleExistanceSetting.areNoneSelected && styles.disabled])}>
+                        <span>FAST (1%)</span>
+                        <span>BALANCED (50%)</span>
+                        <span>DEEP (100%)</span>
                     </div>
-                )}
+                    <Form.Text id="import-verification-percent-help" muted>
+                        Percentage of usenet segments to validate before import. Lower values are faster but less thorough.
+                    </Form.Text>
+                </div>
             </Form.Group>
             <hr />
             <Form.Group>

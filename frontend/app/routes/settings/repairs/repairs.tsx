@@ -35,38 +35,37 @@ export function RepairsSettings({ config, setNewConfig }: RepairsSettingsProps) 
                     {helpText}
                 </Form.Text>
             </Form.Group>
-            {canEnableRepairs && config["repair.enable"] === "true" && (
-                <Form.Group className={styles.subGroup}>
-                    <label htmlFor="health-verification-percent-input" className={styles.sliderLabel}>
-                        Health Check Verification Depth
-                        <span className={styles.sliderValue}>
-                            {config["repair.verification-percent"]}%
-                        </span>
-                    </label>
-                    <input
-                        type="range"
-                        className={styles.sliderInput}
-                        id="health-verification-percent-input"
-                        aria-describedby="health-verification-percent-help"
-                        min={1}
-                        max={100}
-                        step={1}
-                        value={config["repair.verification-percent"]}
-                        onChange={e => setNewConfig({
-                            ...config,
-                            "repair.verification-percent": e.target.value
-                        })}
-                    />
-                    <div className={styles.sliderLabels}>
-                        <span>FAST (1%)</span>
-                        <span>BALANCED (50%)</span>
-                        <span>DEEP (100%)</span>
-                    </div>
-                    <Form.Text id="health-verification-percent-help" muted>
-                        Percentage of usenet segments to validate during background health checks. Lower values are faster but may miss some missing articles.
-                    </Form.Text>
-                </Form.Group>
-            )}
+            <Form.Group className={styles.subGroup}>
+                <label htmlFor="health-verification-percent-input" className={className([styles.sliderLabel, !(canEnableRepairs && config["repair.enable"] === "true") && styles.disabled])}>
+                    Health Check Verification Depth
+                    <span className={styles.sliderValue}>
+                        {config["repair.verification-percent"]}%
+                    </span>
+                </label>
+                <input
+                    type="range"
+                    className={styles.sliderInput}
+                    id="health-verification-percent-input"
+                    aria-describedby="health-verification-percent-help"
+                    min={1}
+                    max={100}
+                    step={1}
+                    disabled={!(canEnableRepairs && config["repair.enable"] === "true")}
+                    value={config["repair.verification-percent"]}
+                    onChange={e => setNewConfig({
+                        ...config,
+                        "repair.verification-percent": e.target.value
+                    })}
+                />
+                <div className={className([styles.sliderLabels, !(canEnableRepairs && config["repair.enable"] === "true") && styles.disabled])}>
+                    <span>FAST (1%)</span>
+                    <span>BALANCED (50%)</span>
+                    <span>DEEP (100%)</span>
+                </div>
+                <Form.Text id="health-verification-percent-help" muted>
+                    Percentage of usenet segments to validate during background health checks. Lower values are faster but may miss some missing articles.
+                </Form.Text>
+            </Form.Group>
             <hr />
             <Form.Group>
                 <Form.Label htmlFor="library-dir-input">Library Directory</Form.Label>

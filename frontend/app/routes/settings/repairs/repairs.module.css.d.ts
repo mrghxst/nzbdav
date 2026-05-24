@@ -7,6 +7,7 @@ declare const styles: {
   readonly "sliderValue": string;
   readonly "sliderInput": string;
   readonly "sliderLabels": string;
+  readonly "disabled": string;
 };
 export = styles;
 
