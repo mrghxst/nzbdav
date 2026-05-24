@@ -1,7 +1,7 @@
 import { Alert, Form } from "react-bootstrap";
 import styles from "./repairs.module.css"
 import { type Dispatch, type SetStateAction } from "react";
-import { className } from "~/utils/styling";
+import { classNames } from "~/utils/styling";
 
 type RepairsSettingsProps = {
     config: Record<string, string>
@@ -36,7 +36,7 @@ export function RepairsSettings({ config, setNewConfig }: RepairsSettingsProps) 
                 </Form.Text>
             </Form.Group>
             <Form.Group className={styles.subGroup}>
-                <label htmlFor="health-verification-percent-input" className={className([styles.sliderLabel, !(canEnableRepairs && config["repair.enable"] === "true") && styles.disabled])}>
+                <label htmlFor="health-verification-percent-input" className={classNames([styles.sliderLabel, !(canEnableRepairs && config["repair.enable"] === "true") && styles.disabled])}>
                     Health Check Verification Depth
                     <span className={styles.sliderValue}>
                         {config["repair.verification-percent"]}%
@@ -57,7 +57,7 @@ export function RepairsSettings({ config, setNewConfig }: RepairsSettingsProps) 
                         "repair.verification-percent": e.target.value
                     })}
                 />
-                <div className={className([styles.sliderLabels, !(canEnableRepairs && config["repair.enable"] === "true") && styles.disabled])}>
+                <div className={classNames([styles.sliderLabels, !(canEnableRepairs && config["repair.enable"] === "true") && styles.disabled])}>
                     <span>FAST (1%)</span>
                     <span>BALANCED (50%)</span>
                     <span>DEEP (100%)</span>

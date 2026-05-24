@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, type Dispatch, type SetStateAc
 import { TagInput } from "~/components/tag-input/tag-input";
 import { MultiCheckboxInput } from "~/components/multi-checkbox-input/multi-checkbox-input";
 import { ExpandingTextInput } from "~/components/expanding-text-input/expanding-text-input";
+import { classNames } from "~/utils/styling";
 import styles from "./sabnzbd.module.css"
 
 type SabnzbdSettingsProps = {
@@ -210,7 +211,7 @@ export function SabnzbdSettings({ config, setNewConfig, appVersion }: SabnzbdSet
                     onChange={value => setNewConfig({ ...config, "api.ensure-article-existence-categories": value })}
                 />
                 <div className={styles.subGroup}>
-                    <label htmlFor="import-verification-percent-input" className={className([styles.sliderLabel, ensureArticleExistanceSetting.areNoneSelected && styles.disabled])}>
+                    <label htmlFor="import-verification-percent-input" className={classNames([styles.sliderLabel, ensureArticleExistanceSetting.areNoneSelected && styles.disabled])}>
                         Segment Verification Depth
                         <span className={styles.sliderValue}>
                             {config["api.import-verification-percent"]}%
@@ -231,7 +232,7 @@ export function SabnzbdSettings({ config, setNewConfig, appVersion }: SabnzbdSet
                             "api.import-verification-percent": e.target.value
                         })}
                     />
-                    <div className={className([styles.sliderLabels, ensureArticleExistanceSetting.areNoneSelected && styles.disabled])}>
+                    <div className={classNames([styles.sliderLabels, ensureArticleExistanceSetting.areNoneSelected && styles.disabled])}>
                         <span>FAST (1%)</span>
                         <span>BALANCED (50%)</span>
                         <span>DEEP (100%)</span>
