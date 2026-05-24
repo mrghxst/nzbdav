@@ -458,7 +458,7 @@ function ProviderModal({ show, provider, onClose, onSave }: ProviderModalProps) 
         && isPositiveInteger(maxConnections)
         && (priority === "" || isInteger(priority));
 
-    const canSave = isFormValid && (connectionTested || speedTested || type == ProviderType.Disabled);
+    const canSave = isFormValid && (connectionTested || type == ProviderType.Disabled);
 
     if (!show) return null;
 
@@ -640,29 +640,30 @@ function ProviderModal({ show, provider, onClose, onSave }: ProviderModalProps) 
                         <Button variant="secondary" onClick={onClose}>
                             Cancel
                         </Button>
-                        {!canSave ? (
-                            <>
-                                <Button
-                                    variant="primary"
-                                    onClick={handleTestConnection}
-                                    disabled={!isFormValid || isTestingConnection || isTestingSpeed}
-                                >
-                                    {isTestingConnection ? "Testing..." : "Test Connection"}
-                                </Button>
-                                <Button
-                                    variant="info"
-                                    onClick={handleTestSpeed}
-                                    disabled={!isFormValid || isTestingSpeed || isTestingConnection}
-                                    style={{ marginLeft: '8px' }}
-                                >
-                                    {isTestingSpeed ? "Testing..." : "Test Speed"}
-                                </Button>
-                            </>
-                        ) : (
-                            <Button variant="primary" onClick={handleSave} disabled={!canSave}>
-                                Save Provider
-                            </Button>
-                        )}
+                        <Button
+                            variant="primary"
+                            onClick={handleTestConnection}
+                            disabled={!isFormValid || isTestingConnection || isTestingSpeed}
+                            style={{ marginLeft: '8px' }}
+                        >
+                            {isTestingConnection ? "Testing..." : "Test Connection"}
+                        </Button>
+                        <Button
+                            variant="info"
+                            onClick={handleTestSpeed}
+                            disabled={!canSave || isTestingSpeed || isTestingConnection}
+                            style={{ marginLeft: '8px' }}
+                        >
+                            {isTestingSpeed ? "Testing..." : "Test Speed"}
+                        </Button>
+                        <Button 
+                            variant="primary" 
+                            onClick={handleSave} 
+                            disabled={!canSave}
+                            style={{ marginLeft: '8px' }}
+                        >
+                            Save Provider
+                        </Button>
                     </div>
                 </div>
             </div>
