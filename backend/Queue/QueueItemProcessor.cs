@@ -167,8 +167,9 @@ public class QueueItemProcessor(
             var healthCheckConcurrency = configManager
                 .GetUsenetProviderConfig()
                 .TotalPooledConnections;
+            var importVerificationPercent = configManager.GetImportVerificationPercent();
             await usenetClient
-                .CheckAllSegmentsAsync(articlesToCheck, healthCheckConcurrency, part3Progress, ct)
+                .CheckAllSegmentsAsync(articlesToCheck, healthCheckConcurrency, part3Progress, ct, importVerificationPercent)
                 .ConfigureAwait(false);
             checkedFullHealth = true;
         }

@@ -1,4 +1,4 @@
-﻿using NzbWebDAV.Clients.Usenet.Models;
+using NzbWebDAV.Clients.Usenet.Models;
 using NzbWebDAV.Models.Nzb;
 using NzbWebDAV.Streams;
 using UsenetSharp.Models;
@@ -62,5 +62,5 @@ public interface INntpClient : IDisposable
         string[] segmentIds, long fileSize, int articleBufferSize);
 
     Task CheckAllSegmentsAsync(
-        IEnumerable<string> segmentIds, int concurrency, IProgress<int>? progress, CancellationToken cancellationToken);
+        IEnumerable<string> segmentIds, int concurrency, IProgress<int>? progress, CancellationToken cancellationToken, int verificationPercent = 100);
 }

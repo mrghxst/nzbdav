@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using NzbWebDAV.Clients.Usenet;
 using NzbWebDAV.Config;
@@ -132,7 +132,8 @@ public class HealthCheckService : BackgroundService
 
             // perform health check
             var progress = progressHook.ToPercentage(segments.Count);
-            await _usenetClient.CheckAllSegmentsAsync(segments, concurrency, progress, ct).ConfigureAwait(false);
+            var healthCheckPercent = _configManager.GetHealthCheckVerificationPercent();
+            await _usenetClient.CheckAllSegmentsAsync(segments, concurrency, progress, ct, healthCheckPercent).ConfigureAwait(false);
             _ = _websocketManager.SendMessage(WebsocketTopic.HealthItemProgress, $"{davItem.Id}|100");
             _ = _websocketManager.SendMessage(WebsocketTopic.HealthItemProgress, $"{davItem.Id}|done");
 

@@ -110,13 +110,17 @@ public abstract class NntpClient : INntpClient
         IEnumerable<string> segmentIds,
         int concurrency,
         IProgress<int>? progress,
-        CancellationToken cancellationToken
+        CancellationToken cancellationToken,
+        int verificationPercent = 100
     )
     {
         using var childCt = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var token = childCt.Token;
 
-        var tasks = segmentIds
+        var allSegments = segmentIds.ToList();
+        var segmentsToCheck = SampleSegments(allSegments, verificationPercent);
+
+        var tasks = segmentsToCheck
             .Select(async segmentId => (
                 SegmentId: segmentId,
                 Result: await StatAsync(segmentId, token).ConfigureAwait(false)
@@ -131,5 +135,22 @@ public abstract class NntpClient : INntpClient
             await childCt.CancelAsync().ConfigureAwait(false);
             throw new UsenetArticleNotFoundException(task.SegmentId);
         }
+    }
+
+    private static List<string> SampleSegments(List<string> segments, int percent)
+    {
+        if (percent >= 100 || segments.Count <= 1) return segments;
+        var count = Math.Max(1, (int)Math.Ceiling(segments.Count * percent / 100.0));
+        if (count >= segments.Count) return segments;
+
+        // Evenly distributed sampling: always include first and last
+        var result = new List<string>(count);
+        var step = (double)(segments.Count - 1) / (count - 1);
+        for (int i = 0; i < count; i++)
+        {
+            var index = (int)Math.Round(i * step);
+            result.Add(segments[index]);
+        }
+        return result;
     }
 }

@@ -209,6 +209,38 @@ export function SabnzbdSettings({ config, setNewConfig, appVersion }: SabnzbdSet
                     value={config["api.ensure-article-existence-categories"] ?? ""}
                     onChange={value => setNewConfig({ ...config, "api.ensure-article-existence-categories": value })}
                 />
+                {!ensureArticleExistanceSetting.areNoneSelected && (
+                    <div className={styles.subGroup}>
+                        <label htmlFor="import-verification-percent-input" className={styles.sliderLabel}>
+                            Segment Verification Depth
+                            <span className={styles.sliderValue}>
+                                {config["api.import-verification-percent"]}%
+                            </span>
+                        </label>
+                        <input
+                            type="range"
+                            className={styles.sliderInput}
+                            id="import-verification-percent-input"
+                            aria-describedby="import-verification-percent-help"
+                            min={1}
+                            max={100}
+                            step={1}
+                            value={config["api.import-verification-percent"]}
+                            onChange={e => setNewConfig({
+                                ...config,
+                                "api.import-verification-percent": e.target.value
+                            })}
+                        />
+                        <div className={styles.sliderLabels}>
+                            <span>FAST (1%)</span>
+                            <span>BALANCED (50%)</span>
+                            <span>DEEP (100%)</span>
+                        </div>
+                        <Form.Text id="import-verification-percent-help" muted>
+                            Percentage of usenet segments to validate before import. Lower values are faster but less thorough.
+                        </Form.Text>
+                    </div>
+                )}
             </Form.Group>
             <hr />
             <Form.Group>
@@ -318,6 +350,7 @@ export function isSabnzbdSettingsUpdated(config: Record<string, string>, newConf
         || config["rclone.mount-dir"] !== newConfig["rclone.mount-dir"]
         || config["api.ensure-importable-video"] !== newConfig["api.ensure-importable-video"]
         || config["api.ensure-article-existence-categories"] !== newConfig["api.ensure-article-existence-categories"]
+        || config["api.import-verification-percent"] !== newConfig["api.import-verification-percent"]
         || config["api.ignore-history-limit"] !== newConfig["api.ignore-history-limit"]
         || config["api.duplicate-nzb-behavior"] !== newConfig["api.duplicate-nzb-behavior"]
         || config["api.download-file-blocklist"] !== newConfig["api.download-file-blocklist"]

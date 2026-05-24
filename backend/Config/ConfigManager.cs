@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using NzbWebDAV.Clients.Usenet.Concurrency;
 using NzbWebDAV.Database;
@@ -303,6 +303,24 @@ public class ConfigManager
         if (!int.TryParse(configValue, out var totalMinutes)) return defaultValue;
         if (totalMinutes < 0 || totalMinutes >= 24 * 60) return defaultValue;
         return TimeSpan.FromMinutes(totalMinutes);
+    }
+
+    public int GetImportVerificationPercent()
+    {
+        var defaultValue = 100;
+        var configValue = StringUtil.EmptyToNull(GetConfigValue("api.import-verification-percent"));
+        if (configValue == null) return defaultValue;
+        if (!int.TryParse(configValue, out var percent)) return defaultValue;
+        return Math.Clamp(percent, 1, 100);
+    }
+
+    public int GetHealthCheckVerificationPercent()
+    {
+        var defaultValue = 100;
+        var configValue = StringUtil.EmptyToNull(GetConfigValue("repair.verification-percent"));
+        if (configValue == null) return defaultValue;
+        if (!int.TryParse(configValue, out var percent)) return defaultValue;
+        return Math.Clamp(percent, 1, 100);
     }
 
     public class ConfigEventArgs : EventArgs

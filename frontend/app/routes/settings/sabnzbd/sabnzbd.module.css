@@ -18,3 +18,33 @@
     margin-top: 15px;
     margin-left: 15px;
 }
+
+.sliderLabel {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    font-size: 0.95rem;
+    color: #93a1a1;
+}
+
+.sliderValue {
+    font-weight: 600;
+    color: #b58900;
+    font-size: 1rem;
+}
+
+.sliderInput {
+    width: 100%;
+    margin-bottom: 2px;
+    accent-color: #b58900;
+}
+
+.sliderLabels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #657b83;
+    margin-bottom: 8px;
+}
