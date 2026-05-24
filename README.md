@@ -24,15 +24,6 @@ https://github.com/user-attachments/assets/f14a0cf7-b19c-4b36-a909-59ca2a3771ef
 * 🧩 **SABnzbd-Compatible API** - *Use NzbDav as a drop-in replacement for sabnzbd.*
 * 🙌 **Sonarr/Radarr Integration** - *Configure it once, and leave it unattended.*
 
-# What's New in this Fork?
-
-This version of NzbDav includes several performance optimizations and new features compared to the original upstream project:
-
-* **Smart Provider Load Balancing**: Implements a "fill-up-then-overflow" priority algorithm for streaming. Your preferred priority-0 providers will be fully saturated before falling back to lower-tier providers, maximizing your primary subscription.
-* **Optimized Health Checks**: Background repairs and NZB imports (`STAT`/`HEAD` commands) are now perfectly load-balanced across all your available pooled providers based on real-time connection availability, drastically speeding up verifications.
-* **Adjustable Verification Depth**: Added UI sliders to configure the percentage of segments to verify during both pre-import checks and background health checks. You can now choose between thorough 100% deep scans or faster sampling (e.g., 10%) to accelerate processing.
-* **Streamlined Docker Build**: Uses a simplified, single-step GitHub Action to automatically build and publish directly to `mrghxst/nzbdav`.
-
 # Getting Started
 
 The easiest way to get started is by using the official Docker image.
@@ -65,6 +56,22 @@ You'll also want to set up a username and password for logging in to the webdav 
 <p align="center">
     <img width="600" alt="webdav-settings" src="https://github.com/user-attachments/assets/833b382c-4e1d-480a-ac25-b9cc674baea4" />
 </p>
+
+# Configuration Tips
+
+### Usenet Provider Priorities
+NzbDav intelligently routes your Usenet traffic based on the command type to maximize performance:
+* **Streaming (Fill-up-then-overflow)**: For video streaming, NzbDav respects your provider priority settings. It will completely saturate your Priority 0 provider's available connections first. Only when Priority 0 is fully utilized will it overflow to your Priority 1 provider, and so on. This ensures your primary block/unlimited account takes the brunt of the heavy lifting.
+* **Health Checks & Imports (Load Balancing)**: Background tasks like article health checks and NZB imports are automatically load-balanced across *all* your pooled providers simultaneously, routing requests to whichever provider has the most available connections at that exact millisecond. 
+
+### Adjustable Verification Sliders
+You have fine-grained control over how deeply NzbDav verifies NZB segments:
+* **Segment Verification Depth (Imports)**: Adjust how many segments of an NZB are validated before it is successfully imported.
+* **Health Check Verification Depth (Repairs)**: Adjust the thoroughness of background health monitoring.
+Lowering these sliders speeds up the respective processes by sampling fewer segments, while setting them to 100% (Deep) guarantees every single segment is checked.
+
+### Speed Test Data Usage
+**Note:** Running the built-in provider Speed Test will consume approximately **100MB of data** per test. Keep this in mind if you are testing a limited block account.
 
 # Comprehensive Setup Guide
 
