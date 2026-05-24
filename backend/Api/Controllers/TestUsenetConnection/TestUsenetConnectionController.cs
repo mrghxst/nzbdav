@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using System.Diagnostics;
+using Microsoft.AspNetCore.Mvc;
 using NzbWebDAV.Clients.Usenet;
 using NzbWebDAV.Exceptions;
 
@@ -12,8 +13,11 @@ public class TestUsenetConnectionController() : BaseApiController
     {
         try
         {
-            await UsenetStreamingClient.CreateNewConnection(request.ToConnectionDetails(), HttpContext.RequestAborted).ConfigureAwait(false);
-            return new TestUsenetConnectionResponse { Status = true, Connected = true };
+            var sw = Stopwatch.StartNew();
+            var client = await UsenetStreamingClient.CreateNewConnection(request.ToConnectionDetails(), HttpContext.RequestAborted).ConfigureAwait(false);
+            await client.DateAsync(HttpContext.RequestAborted).ConfigureAwait(false);
+            sw.Stop();
+            return new TestUsenetConnectionResponse { Status = true, Connected = true, LatencyMs = sw.ElapsedMilliseconds };
         }
         catch (CouldNotConnectToUsenetException)
         {

@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using NzbWebDAV.Clients.Usenet.Concurrency;
 using NzbWebDAV.Clients.Usenet.Connections;
 using NzbWebDAV.Clients.Usenet.Models;
@@ -25,10 +25,12 @@ namespace NzbWebDAV.Clients.Usenet;
 public class MultiConnectionNntpClient(
     ConnectionPool<INntpClient> connectionPool,
     ProviderType type,
-    ProviderCircuitBreaker circuitBreaker
+    ProviderCircuitBreaker circuitBreaker,
+    int priority
 ) : NntpClient
 {
     public ProviderType ProviderType { get; } = type;
+    public int Priority { get; } = priority;
     public bool IsTripped => circuitBreaker.IsTripped;
     public int LiveConnections => connectionPool.LiveConnections;
     public int IdleConnections => connectionPool.IdleConnections;

@@ -1,4 +1,4 @@
-﻿using NzbWebDAV.Models;
+using NzbWebDAV.Models;
 
 namespace NzbWebDAV.Config;
 
@@ -20,5 +20,6 @@ public class UsenetProviderConfig
         public required string User { get; set; }
         public required string Pass { get; set; }
         public required int MaxConnections { get; set; }
+        public int Priority { get; set; } = 0;
     }
 }

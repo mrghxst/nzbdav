@@ -1,4 +1,4 @@
-﻿using NzbWebDAV.Clients.Usenet.Connections;
+using NzbWebDAV.Clients.Usenet.Connections;
 using NzbWebDAV.Config;
 using NzbWebDAV.Websocket;
 
@@ -60,7 +60,7 @@ public class UsenetStreamingClient : WrappingNntpClient
             onConnectionPoolChanged
         );
         var circuitBreaker = new ProviderCircuitBreaker(connectionDetails.Host);
-        return new MultiConnectionNntpClient(connectionPool, connectionDetails.Type, circuitBreaker);
+        return new MultiConnectionNntpClient(connectionPool, connectionDetails.Type, circuitBreaker, connectionDetails.Priority);
     }
 
     private static ConnectionPool<INntpClient> CreateNewConnectionPool

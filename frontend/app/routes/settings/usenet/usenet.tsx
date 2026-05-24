@@ -25,6 +25,7 @@ type ConnectionDetails = {
     User: string;
     Pass: string;
     MaxConnections: number;
+    Priority: number;
 };
 
 type ConnectionCounts = {
@@ -263,6 +264,18 @@ export function UsenetSettings({ config, setNewConfig }: UsenetSettingsProps) {
                                                 </div>
                                             </div>
 
+                                            <div className={styles["provider-detail-item"]}>
+                                                <div className={styles["provider-detail-icon"]}>
+                                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                                    </svg>
+                                                </div>
+                                                <div className={styles["provider-detail-content"]}>
+                                                    <span className={styles["provider-detail-label"]}>Priority</span>
+                                                    <span className={styles["provider-detail-value"]}>{provider.Priority ?? 0}</span>
+                                                </div>
+                                            </div>
+
                                         </div>
                                     </div>
                                 </div>
@@ -296,9 +309,11 @@ function ProviderModal({ show, provider, onClose, onSave }: ProviderModalProps) 
     const [user, setUser] = useState(provider?.User || "");
     const [pass, setPass] = useState(provider?.Pass || "");
     const [maxConnections, setMaxConnections] = useState(provider?.MaxConnections?.toString() || "");
+    const [priority, setPriority] = useState(provider?.Priority?.toString() || "0");
     const [type, setType] = useState<ProviderType>(provider?.Type ?? ProviderType.Pooled);
     const [isTestingConnection, setIsTestingConnection] = useState(false);
     const [connectionTested, setConnectionTested] = useState(false);
+    const [testLatency, setTestLatency] = useState<number | null>(null);
     const [testError, setTestError] = useState<string | null>(null);
 
     // Reset form when modal opens or provider changes
@@ -310,8 +325,10 @@ function ProviderModal({ show, provider, onClose, onSave }: ProviderModalProps) 
             setUser(provider?.User || "");
             setPass(provider?.Pass || "");
             setMaxConnections(provider?.MaxConnections?.toString() || "");
+            setPriority(provider?.Priority?.toString() ?? "0");
             setType(provider?.Type ?? ProviderType.Pooled);
             setConnectionTested(false);
+            setTestLatency(null);
             setTestError(null);
         }
     }, [show, provider]);
@@ -333,6 +350,7 @@ function ProviderModal({ show, provider, onClose, onSave }: ProviderModalProps) 
     const handleTestConnection = useCallback(async () => {
         setIsTestingConnection(true);
         setTestError(null);
+        setTestLatency(null);
 
         try {
             const formData = new FormData();
@@ -351,6 +369,7 @@ function ProviderModal({ show, provider, onClose, onSave }: ProviderModalProps) 
                 const data = await response.json();
                 if (data.connected) {
                     setConnectionTested(true);
+                    setTestLatency(data.latencyMs);
                     setTestError(null);
                 } else {
                     setTestError("Connection test failed");
@@ -374,8 +393,9 @@ function ProviderModal({ show, provider, onClose, onSave }: ProviderModalProps) 
             User: user,
             Pass: pass,
             MaxConnections: parseInt(maxConnections, 10),
+            Priority: parseInt(priority, 10) || 0,
         });
-    }, [type, host, port, useSsl, user, pass, maxConnections, onSave]);
+    }, [type, host, port, useSsl, user, pass, maxConnections, priority, onSave]);
 
     const handleOverlayClick = useCallback((e: React.MouseEvent) => {
         if (e.target === e.currentTarget) {
@@ -387,7 +407,8 @@ function ProviderModal({ show, provider, onClose, onSave }: ProviderModalProps) 
         && isPositiveInteger(port)
         && user.trim() !== ""
         && pass.trim() !== ""
-        && isPositiveInteger(maxConnections);
+        && isPositiveInteger(maxConnections)
+        && (priority === "" || isInteger(priority));
 
     const canSave = isFormValid && (connectionTested || type == ProviderType.Disabled);
 
@@ -505,6 +526,20 @@ function ProviderModal({ show, provider, onClose, onSave }: ProviderModalProps) 
                             </select>
                         </div>
 
+                        <div className={styles["form-group"]}>
+                            <label htmlFor="provider-priority" className={styles["form-label"]}>
+                                Priority (Lower is better)
+                            </label>
+                            <input
+                                type="text"
+                                id="provider-priority"
+                                className={`${styles["form-input"]} ${!isInteger(priority) && priority !== "" ? styles.error : ""}`}
+                                placeholder="0"
+                                value={priority}
+                                onChange={(e) => setPriority(e.target.value)}
+                            />
+                        </div>
+
                         <div className={`${styles["form-group"]} ${styles["full-width"]}`}>
                             <div className={styles["form-checkbox-wrapper"]}>
                                 <input
@@ -532,7 +567,7 @@ function ProviderModal({ show, provider, onClose, onSave }: ProviderModalProps) 
 
                     {connectionTested && (
                         <div className={`${styles.alert} ${styles["alert-success"]}`} style={{ marginTop: '16px' }}>
-                            Connection test successful!
+                            Connection test successful! {testLatency !== null && `(Latency: ${testLatency}ms)`}
                         </div>
                     )}
                 </div>
@@ -570,4 +605,9 @@ export function isUsenetSettingsUpdated(config: Record<string, string>, newConfi
 export function isPositiveInteger(value: string) {
     const num = Number(value);
     return Number.isInteger(num) && num > 0 && value.trim() === num.toString();
+}
+
+export function isInteger(value: string) {
+    const num = Number(value);
+    return Number.isInteger(num) && value.trim() === num.toString();
 }

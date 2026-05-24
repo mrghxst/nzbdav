@@ -1,4 +1,4 @@
-﻿using System.Runtime.ExceptionServices;
+using System.Runtime.ExceptionServices;
 using NzbWebDAV.Clients.Usenet.Models;
 using NzbWebDAV.Extensions;
 using NzbWebDAV.Models;
@@ -163,6 +163,7 @@ public class MultiProviderNntpClient(List<MultiConnectionNntpClient> providers) 
         var enabled = providers
             .Where(x => x.ProviderType != ProviderType.Disabled)
             .OrderBy(x => x.ProviderType)
+            .ThenBy(x => x.Priority)
             .ThenByDescending(x => x.AvailableConnections)
             .ToList();
 
