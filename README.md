@@ -24,6 +24,15 @@ https://github.com/user-attachments/assets/f14a0cf7-b19c-4b36-a909-59ca2a3771ef
 * 🧩 **SABnzbd-Compatible API** - *Use NzbDav as a drop-in replacement for sabnzbd.*
 * 🙌 **Sonarr/Radarr Integration** - *Configure it once, and leave it unattended.*
 
+# What's New in this Fork?
+
+This version of NzbDav includes several performance optimizations and new features compared to the original upstream project:
+
+* **Smart Provider Load Balancing**: Implements a "fill-up-then-overflow" priority algorithm for streaming. Your preferred priority-0 providers will be fully saturated before falling back to lower-tier providers, maximizing your primary subscription.
+* **Optimized Health Checks**: Background repairs and NZB imports (`STAT`/`HEAD` commands) are now perfectly load-balanced across all your available pooled providers based on real-time connection availability, drastically speeding up verifications.
+* **Adjustable Verification Depth**: Added UI sliders to configure the percentage of segments to verify during both pre-import checks and background health checks. You can now choose between thorough 100% deep scans or faster sampling (e.g., 10%) to accelerate processing.
+* **Streamlined Docker Build**: Uses a simplified, single-step GitHub Action to automatically build and publish directly to `mrghxst/nzbdav`.
+
 # Getting Started
 
 The easiest way to get started is by using the official Docker image.
