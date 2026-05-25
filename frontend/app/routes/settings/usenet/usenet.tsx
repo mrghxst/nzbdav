@@ -148,7 +148,22 @@ export function UsenetSettings({ config, setNewConfig }: UsenetSettingsProps) {
                     </p>
                 ) : (
                     <div className={styles["providers-grid"]}>
-                        {providerConfig.Providers.map((provider, index) => (
+                        {providerConfig.Providers
+                            .map((provider, index) => ({ provider, index }))
+                            .sort((a, b) => {
+                                const getGroup = (type: ProviderType) => {
+                                    if (type === ProviderType.Pooled) return 0;
+                                    if (type === ProviderType.BackupAndStats || type === ProviderType.BackupOnly) return 1;
+                                    return 2;
+                                };
+                                const groupA = getGroup(a.provider.Type);
+                                const groupB = getGroup(b.provider.Type);
+                                if (groupA !== groupB) return groupA - groupB;
+                                const prioDiff = (a.provider.Priority ?? 0) - (b.provider.Priority ?? 0);
+                                if (prioDiff !== 0) return prioDiff;
+                                return a.index - b.index;
+                            })
+                            .map(({ provider, index }) => (
                             <div key={index} className={styles["provider-card"]}>
                                 <div className={styles["provider-card-inner"]}>
                                     <div className={styles["provider-header"]}>
