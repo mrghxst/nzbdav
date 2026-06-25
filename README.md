@@ -64,6 +64,13 @@ NzbDav intelligently routes your Usenet traffic based on the command type to max
 * **Streaming (Fill-up-then-overflow)**: For video streaming, NzbDav respects your provider priority settings. It will completely saturate your Priority 0 provider's available connections first. Only when Priority 0 is fully utilized will it overflow to your Priority 1 provider, and so on. This ensures your primary block/unlimited account takes the brunt of the heavy lifting.
 * **Health Checks & Imports (Load Balancing)**: Background tasks like article health checks and NZB imports are automatically load-balanced across *all* your pooled providers simultaneously, routing requests to whichever provider has the most available connections at that exact millisecond. 
 
+### Backbone Grouping (Optional)
+If you have multiple providers that resell the *same* upstream backbone (i.e. identical article availability), you can give them a shared **Backbone** label in each provider's settings. When one provider on a backbone reports an article as missing, NzbDav skips the remaining providers sharing that label for that request instead of re-probing the same storage — reducing latency for missing articles. The label is free-text and matched case-insensitively.
+
+* Only a definitive "article not found" response triggers a skip — connection errors never do.
+* Leave the field blank (the default) to keep the standard fallback behavior, which probes every provider.
+* **Caveat:** Only group providers you are sure share storage *and* the same takedown/retention policy. If two resellers on one backbone apply different DMCA filtering or retention, grouping them could cause an article available on one to be reported missing because a sibling was checked first.
+
 ### Adjustable Verification Sliders
 You have fine-grained control over how deeply NzbDav verifies NZB segments:
 * **Segment Verification Depth (Imports)**: Adjust how many segments of an NZB are validated before it is successfully imported.

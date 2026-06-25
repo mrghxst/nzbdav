@@ -60,7 +60,7 @@ public class UsenetStreamingClient : WrappingNntpClient
             onConnectionPoolChanged
         );
         var circuitBreaker = new ProviderCircuitBreaker(connectionDetails.Host);
-        return new MultiConnectionNntpClient(connectionPool, connectionDetails.Type, circuitBreaker, connectionDetails.Priority, connectionDetails.Host);
+        return new MultiConnectionNntpClient(connectionPool, connectionDetails.Type, circuitBreaker, connectionDetails.Priority, connectionDetails.Host, connectionDetails.Backbone);
     }
 
     private static ConnectionPool<INntpClient> CreateNewConnectionPool

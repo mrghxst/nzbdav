@@ -26,6 +26,7 @@ type ConnectionDetails = {
     Pass: string;
     MaxConnections: number;
     Priority: number;
+    Backbone: string;
 };
 
 type ConnectionCounts = {
@@ -291,6 +292,22 @@ export function UsenetSettings({ config, setNewConfig }: UsenetSettingsProps) {
                                                 </div>
                                             </div>
 
+                                            {provider.Backbone && (
+                                                <div className={styles["provider-detail-item"]}>
+                                                    <div className={styles["provider-detail-icon"]}>
+                                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                            <ellipse cx="12" cy="5" rx="9" ry="3" />
+                                                            <path d="M3 5v6c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+                                                            <path d="M3 11v6c0 1.66 4 3 9 3s9-1.34 9-3v-6" />
+                                                        </svg>
+                                                    </div>
+                                                    <div className={styles["provider-detail-content"]}>
+                                                        <span className={styles["provider-detail-label"]}>Backbone</span>
+                                                        <span className={styles["provider-detail-value"]}>{provider.Backbone}</span>
+                                                    </div>
+                                                </div>
+                                            )}
+
                                         </div>
                                     </div>
                                 </div>
@@ -325,6 +342,7 @@ function ProviderModal({ show, provider, onClose, onSave }: ProviderModalProps) 
     const [pass, setPass] = useState(provider?.Pass || "");
     const [maxConnections, setMaxConnections] = useState(provider?.MaxConnections?.toString() || "");
     const [priority, setPriority] = useState(provider?.Priority?.toString() || "0");
+    const [backbone, setBackbone] = useState(provider?.Backbone || "");
     const [type, setType] = useState<ProviderType>(provider?.Type ?? ProviderType.Pooled);
     const [isTestingConnection, setIsTestingConnection] = useState(false);
     const [isTestingSpeed, setIsTestingSpeed] = useState(false);
@@ -345,6 +363,7 @@ function ProviderModal({ show, provider, onClose, onSave }: ProviderModalProps) 
             setPass(provider?.Pass || "");
             setMaxConnections(provider?.MaxConnections?.toString() || "");
             setPriority(provider?.Priority?.toString() ?? "0");
+            setBackbone(provider?.Backbone || "");
             setType(provider?.Type ?? ProviderType.Pooled);
             setConnectionTested(false);
             setSpeedTested(false);
@@ -460,8 +479,9 @@ function ProviderModal({ show, provider, onClose, onSave }: ProviderModalProps) 
             Pass: pass,
             MaxConnections: parseInt(maxConnections, 10),
             Priority: parseInt(priority, 10) || 0,
+            Backbone: backbone.trim(),
         });
-    }, [type, host, port, useSsl, user, pass, maxConnections, priority, onSave]);
+    }, [type, host, port, useSsl, user, pass, maxConnections, priority, backbone, onSave]);
 
     const handleOverlayClick = useCallback((e: React.MouseEvent) => {
         if (e.target === e.currentTarget) {
@@ -611,6 +631,26 @@ function ProviderModal({ show, provider, onClose, onSave }: ProviderModalProps) 
                                 value={priority}
                                 onChange={(e) => setPriority(e.target.value)}
                             />
+                        </div>
+
+                        <div className={`${styles["form-group"]} ${styles["full-width"]}`}>
+                            <label htmlFor="provider-backbone" className={styles["form-label"]}>
+                                Backbone (optional)
+                            </label>
+                            <input
+                                type="text"
+                                id="provider-backbone"
+                                className={styles["form-input"]}
+                                placeholder="e.g. omicron"
+                                value={backbone}
+                                onChange={(e) => setBackbone(e.target.value)}
+                            />
+                            <div style={{ fontSize: '0.85em', marginTop: '4px', opacity: 0.8 }}>
+                                Give providers that share the same upstream backbone (identical article
+                                availability) the same label. When one reports an article missing, the others
+                                with this label are skipped for that request to reduce latency. Leave blank
+                                unless you are sure they share storage.
+                            </div>
                         </div>
 
                         <div className={`${styles["form-group"]} ${styles["full-width"]}`}>

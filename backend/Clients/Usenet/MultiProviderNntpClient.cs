@@ -128,12 +128,31 @@ public class MultiProviderNntpClient(List<MultiConnectionNntpClient> providers) 
     ) where T : UsenetResponse
     {
         ExceptionDispatchInfo? lastException = null;
+        T? lastNoArticleResult = null;
+        var lastOutcomeWasException = false;
+
+        // Backbones that have authoritatively reported the article missing during
+        // this single request. Providers sharing one of these labels are skipped,
+        // since they share the same upstream storage and would only 430 again.
+        var missingBackbones = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var orderedProviders = GetOrderedProviders(useStreamingPriority);
-        for (var i = 0; i < orderedProviders.Count; i++)
+
+        foreach (var provider in orderedProviders)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var provider = orderedProviders[i];
-            var isLastProvider = i == orderedProviders.Count - 1;
+
+            var backbone = provider.Backbone?.Trim() ?? "";
+            var isGrouped = backbone.Length > 0;
+
+            // Skip providers on a backbone a sibling already reported missing.
+            if (isGrouped && missingBackbones.Contains(backbone))
+            {
+                Log.Debug(
+                    "Skipping provider `{Provider}` on backbone `{Backbone}` — " +
+                    "a sibling provider already reported the article missing.",
+                    provider.ProviderName, backbone);
+                continue;
+            }
 
             if (lastException is not null)
             {
@@ -146,18 +165,29 @@ public class MultiProviderNntpClient(List<MultiConnectionNntpClient> providers) 
                 var result = await task.Invoke(provider).ConfigureAwait(false);
 
                 // if no article with that message-id is found, try again with the next provider.
-                if (!isLastProvider && result.ResponseType == UsenetResponseType.NoArticleWithThatMessageId)
+                // Only a definitive 430 marks the backbone missing — never a connection error.
+                if (result.ResponseType == UsenetResponseType.NoArticleWithThatMessageId)
+                {
+                    lastNoArticleResult = result;
+                    lastOutcomeWasException = false;
+                    if (isGrouped) missingBackbones.Add(backbone);
                     continue;
+                }
 
                 return result;
             }
             catch (Exception e) when (!e.IsCancellationException())
             {
                 lastException = ExceptionDispatchInfo.Capture(e);
+                lastOutcomeWasException = true;
             }
         }
 
-        lastException?.Throw();
+        // Whichever terminal outcome occurred on the last attempted provider wins,
+        // matching the original fallback precedence (a later connection error beats
+        // an earlier 430, and a later 430 beats an earlier error).
+        if (lastOutcomeWasException) lastException!.Throw();
+        if (lastNoArticleResult is not null) return lastNoArticleResult;
         throw new Exception("There are no usenet providers configured.");
     }
 

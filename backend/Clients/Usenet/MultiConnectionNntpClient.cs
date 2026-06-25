@@ -29,11 +29,14 @@ public class MultiConnectionNntpClient(
     ProviderType type,
     ProviderCircuitBreaker circuitBreaker,
     int priority,
-    string providerName
+    string providerName,
+    string backbone = ""
 ) : NntpClient
 {
     public ProviderType ProviderType { get; } = type;
     public int Priority { get; } = priority;
+    public string ProviderName { get; } = providerName;
+    public string Backbone { get; } = backbone;
     public bool IsTripped => circuitBreaker.IsTripped;
     public int LiveConnections => connectionPool.LiveConnections;
     public int IdleConnections => connectionPool.IdleConnections;
