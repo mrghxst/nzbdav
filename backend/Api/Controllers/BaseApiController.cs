@@ -27,7 +27,7 @@ public abstract class BaseApiController : ControllerBase
 
             return await HandleRequest().ConfigureAwait(false);
         }
-        catch (BadHttpRequestException e)
+        catch (Exception e) when (e is BadHttpRequestException or ArgumentException)
         {
             return BadRequest(new BaseApiResponse()
             {

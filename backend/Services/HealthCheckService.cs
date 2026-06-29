@@ -37,8 +37,9 @@ public class HealthCheckService : BackgroundService
 
         _configManager.OnConfigChanged += (_, configEventArgs) =>
         {
-            // when usenet host changes, clear the missing segments cache
-            if (!configEventArgs.ChangedConfig.ContainsKey("usenet.host")) return;
+            // when the usenet providers change, the upstream storage may differ, so the
+            // cached "known missing" segments are no longer authoritative — clear them.
+            if (!configEventArgs.ChangedConfig.ContainsKey(ConfigKeys.UsenetProviders)) return;
             lock (_missingSegmentIds) _missingSegmentIds.Clear();
         };
     }

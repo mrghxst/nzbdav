@@ -12,6 +12,10 @@ public class UpdateConfigController(DavDatabaseClient dbClient, ConfigManager co
 {
     private async Task<UpdateConfigResponse> UpdateConfig(UpdateConfigRequest request)
     {
+        // 0. Validate incoming values up-front, so a malformed value is rejected here with a
+        //    clear message instead of throwing later deep inside a request or background task.
+        ConfigManager.ValidateConfigItems(request.ConfigItems);
+
         // 1. Retrieve all ConfigItems from the database that match the ConfigNames in the request
         var configNames = request.ConfigItems.Select(x => x.ConfigName).ToHashSet();
         var existingItems = await dbClient.Ctx.ConfigItems

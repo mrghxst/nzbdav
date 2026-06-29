@@ -13,7 +13,7 @@ public class UsenetStreamingClient : WrappingNntpClient
         configManager.OnConfigChanged += (_, configEventArgs) =>
         {
             // if unrelated config changed, do nothing
-            if (!configEventArgs.ChangedConfig.ContainsKey("usenet.providers")) return;
+            if (!configEventArgs.ChangedConfig.ContainsKey(ConfigKeys.UsenetProviders)) return;
 
             // update the connection-pool according to the new config
             var newUsenetClient = CreateDownloadingNntpClient(configManager, websocketManager);

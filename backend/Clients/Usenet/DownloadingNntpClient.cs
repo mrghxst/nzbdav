@@ -28,13 +28,13 @@ public class DownloadingNntpClient : WrappingNntpClient
 
     private void OnConfigChanged(object? sender, ConfigManager.ConfigEventArgs e)
     {
-        if (e.ChangedConfig.ContainsKey("usenet.max-download-connections"))
+        if (e.ChangedConfig.ContainsKey(ConfigKeys.MaxDownloadConnections))
         {
             var maxDownloadConnections = _configManager.GetMaxDownloadConnections();
             _semaphore.UpdateMaxAllowed(maxDownloadConnections);
         }
 
-        if (e.ChangedConfig.ContainsKey("usenet.streaming-priority"))
+        if (e.ChangedConfig.ContainsKey(ConfigKeys.StreamingPriority))
         {
             var streamingPriority = _configManager.GetStreamingPriority();
             _semaphore.UpdatePriorityOdds(streamingPriority);
