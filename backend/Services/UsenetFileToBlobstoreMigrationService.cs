@@ -11,7 +11,10 @@ namespace NzbWebDAV.Services;
 /// Background service that migrates usenet file data
 /// from the sqlite database to the blob-store.
 /// </summary>
-public class UsenetFileToBlobstoreMigrationService(WebsocketManager websocketManager) : BackgroundService
+public class UsenetFileToBlobstoreMigrationService(
+    WebsocketManager websocketManager,
+    IDbContextFactory<DavDatabaseContext> dbContextFactory
+) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -30,7 +33,7 @@ public class UsenetFileToBlobstoreMigrationService(WebsocketManager websocketMan
 
     private async Task<int> GetTotalCountLeft(CancellationToken ct)
     {
-        await using var dbContext = new DavDatabaseContext();
+        await using var dbContext = dbContextFactory.CreateDbContext();
         return await dbContext.NzbFiles.CountAsync(ct) +
                await dbContext.RarFiles.CountAsync(ct) +
                await dbContext.MultipartFiles.CountAsync(ct);
@@ -89,7 +92,7 @@ public class UsenetFileToBlobstoreMigrationService(WebsocketManager websocketMan
         {
             try
             {
-                await using var dbContext = new DavDatabaseContext();
+                await using var dbContext = dbContextFactory.CreateDbContext();
                 var fileToMigrate = await getFileToMigrate(dbContext);
                 if (fileToMigrate == null) return totalRemaining;
                 var davItem = await GetDavItem(getFileToMigrateId(fileToMigrate), dbContext, ct);

@@ -10,7 +10,7 @@ namespace NzbWebDAV.Services;
 /// Background service that processes the blob cleanup queue.
 /// Continuously monitors BlobCleanupQueueItems table and deletes corresponding blobs.
 /// </summary>
-public class BlobCleanupService : BackgroundService
+public class BlobCleanupService(IDbContextFactory<DavDatabaseContext> dbContextFactory) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -18,7 +18,7 @@ public class BlobCleanupService : BackgroundService
         {
             try
             {
-                await using var dbContext = new DavDatabaseContext();
+                await using var dbContext = dbContextFactory.CreateDbContext();
 
                 // Get the first item from the queue
                 var cleanupItem = await dbContext.BlobCleanupItems

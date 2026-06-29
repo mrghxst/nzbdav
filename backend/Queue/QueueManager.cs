@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using NzbWebDAV.Clients.Usenet;
 using NzbWebDAV.Config;
 using NzbWebDAV.Database;
@@ -18,6 +19,7 @@ public class QueueManager : IDisposable
     private readonly SemaphoreSlim _semaphore = new(1, 1);
     private readonly ConfigManager _configManager;
     private readonly WebsocketManager _websocketManager;
+    private readonly IDbContextFactory<DavDatabaseContext> _dbContextFactory;
 
     private CancellationTokenSource _sleepingQueueToken = new();
     private readonly Lock _sleepingQueueLock = new();
@@ -25,12 +27,14 @@ public class QueueManager : IDisposable
     public QueueManager(
         UsenetStreamingClient usenetClient,
         ConfigManager configManager,
-        WebsocketManager websocketManager
+        WebsocketManager websocketManager,
+        IDbContextFactory<DavDatabaseContext> dbContextFactory
     )
     {
         _usenetClient = usenetClient;
         _configManager = configManager;
         _websocketManager = websocketManager;
+        _dbContextFactory = dbContextFactory;
         _cancellationTokenSource = CancellationTokenSource
             .CreateLinkedTokenSource(SigtermUtil.GetCancellationToken());
         _ = ProcessQueueAsync(_cancellationTokenSource.Token);
@@ -82,7 +86,7 @@ public class QueueManager : IDisposable
             try
             {
                 // get the next queue-item from the database
-                await using var dbContext = new DavDatabaseContext();
+                await using var dbContext = _dbContextFactory.CreateDbContext();
                 var dbClient = new DavDatabaseClient(dbContext);
                 var topItem = await LockAsync(() => dbClient.GetTopQueueItem(ct)).ConfigureAwait(false);
                 if (topItem.queueItem is null)

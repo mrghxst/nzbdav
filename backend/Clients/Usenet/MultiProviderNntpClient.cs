@@ -52,55 +52,52 @@ public class MultiProviderNntpClient(List<MultiConnectionNntpClient> providers) 
         return RunFromPoolWithBackup(x => x.DateAsync(cancellationToken), cancellationToken, useStreamingPriority: false);
     }
 
-    public override async Task<UsenetDecodedBodyResponse> DecodedBodyAsync
+    public override Task<UsenetDecodedBodyResponse> DecodedBodyAsync
     (
         SegmentId segmentId,
         Action<ArticleBodyResult>? onConnectionReadyAgain,
         CancellationToken cancellationToken
     )
     {
-        UsenetDecodedBodyResponse? result;
-        try
-        {
-            result = await RunFromPoolWithBackup(
-                x => x.DecodedBodyAsync(segmentId, OnConnectionReadyAgain, cancellationToken),
+        return RunDecodeWithReadyCallback(
+            readyCallback => RunFromPoolWithBackup(
+                x => x.DecodedBodyAsync(segmentId, readyCallback, cancellationToken),
                 cancellationToken,
-                useStreamingPriority: true
-            ).ConfigureAwait(false);
-        }
-        catch
-        {
-            onConnectionReadyAgain?.Invoke(ArticleBodyResult.NotRetrieved);
-            throw;
-        }
-
-        if (result.ResponseType != UsenetResponseType.ArticleRetrievedBodyFollows)
-            onConnectionReadyAgain?.Invoke(ArticleBodyResult.NotRetrieved);
-
-        return result;
-
-        void OnConnectionReadyAgain(ArticleBodyResult articleBodyResult)
-        {
-            if (articleBodyResult == ArticleBodyResult.Retrieved)
-                onConnectionReadyAgain?.Invoke(ArticleBodyResult.Retrieved);
-        }
+                useStreamingPriority: true),
+            UsenetResponseType.ArticleRetrievedBodyFollows,
+            onConnectionReadyAgain);
     }
 
-    public override async Task<UsenetDecodedArticleResponse> DecodedArticleAsync
+    public override Task<UsenetDecodedArticleResponse> DecodedArticleAsync
     (
         SegmentId segmentId,
         Action<ArticleBodyResult>? onConnectionReadyAgain,
         CancellationToken cancellationToken
     )
     {
-        UsenetDecodedArticleResponse? result;
+        return RunDecodeWithReadyCallback(
+            readyCallback => RunFromPoolWithBackup(
+                x => x.DecodedArticleAsync(segmentId, readyCallback, cancellationToken),
+                cancellationToken,
+                useStreamingPriority: true),
+            UsenetResponseType.ArticleRetrievedHeadAndBodyFollow,
+            onConnectionReadyAgain);
+    }
+
+    // Shared wrapper for the two streaming overloads above: forward a "connection ready again"
+    // signal to the caller only on a successful retrieval, and guarantee the caller is told
+    // "not retrieved" exactly once on failure or a non-success response.
+    private static async Task<T> RunDecodeWithReadyCallback<T>
+    (
+        Func<Action<ArticleBodyResult>, Task<T>> run,
+        UsenetResponseType successResponseType,
+        Action<ArticleBodyResult>? onConnectionReadyAgain
+    ) where T : UsenetResponse
+    {
+        T result;
         try
         {
-            result = await RunFromPoolWithBackup(
-                x => x.DecodedArticleAsync(segmentId, OnConnectionReadyAgain, cancellationToken),
-                cancellationToken,
-                useStreamingPriority: true
-            ).ConfigureAwait(false);
+            result = await run(OnConnectionReadyAgain).ConfigureAwait(false);
         }
         catch
         {
@@ -108,7 +105,7 @@ public class MultiProviderNntpClient(List<MultiConnectionNntpClient> providers) 
             throw;
         }
 
-        if (result.ResponseType != UsenetResponseType.ArticleRetrievedHeadAndBodyFollow)
+        if (result.ResponseType != successResponseType)
             onConnectionReadyAgain?.Invoke(ArticleBodyResult.NotRetrieved);
 
         return result;

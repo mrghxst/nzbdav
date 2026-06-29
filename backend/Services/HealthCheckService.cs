@@ -21,6 +21,7 @@ public class HealthCheckService : BackgroundService
     private readonly ConfigManager _configManager;
     private readonly INntpClient _usenetClient;
     private readonly WebsocketManager _websocketManager;
+    private readonly IDbContextFactory<DavDatabaseContext> _dbContextFactory;
 
     private static readonly HashSet<string> _missingSegmentIds = [];
 
@@ -28,12 +29,14 @@ public class HealthCheckService : BackgroundService
     (
         ConfigManager configManager,
         UsenetStreamingClient usenetClient,
-        WebsocketManager websocketManager
+        WebsocketManager websocketManager,
+        IDbContextFactory<DavDatabaseContext> dbContextFactory
     )
     {
         _configManager = configManager;
         _usenetClient = usenetClient;
         _websocketManager = websocketManager;
+        _dbContextFactory = dbContextFactory;
 
         _configManager.OnConfigChanged += (_, configEventArgs) =>
         {
@@ -62,7 +65,7 @@ public class HealthCheckService : BackgroundService
                 using var cts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
 
                 // get the davItem to health-check
-                await using var dbContext = new DavDatabaseContext();
+                await using var dbContext = _dbContextFactory.CreateDbContext();
                 var dbClient = new DavDatabaseClient(dbContext);
                 var currentDateTime = DateTimeOffset.UtcNow;
                 var davItem = await GetHealthCheckQueueItems(dbClient)

@@ -11,18 +11,40 @@ using NzbWebDAV.WebDav;
 
 namespace NzbWebDAV.Database;
 
-public sealed class DavDatabaseContext() : DbContext(Options.Value)
+public sealed class DavDatabaseContext : DbContext
 {
+    // Parameterless ctor for callers that run before the DI container exists
+    // (Program startup, ConfigManager bootstrap, the design-time factory).
+    public DavDatabaseContext() : base(Options.Value)
+    {
+    }
+
+    // Ctor used by DI / the IDbContextFactory, so options come from one place.
+    public DavDatabaseContext(DbContextOptions<DavDatabaseContext> options) : base(options)
+    {
+    }
+
     public static string ConfigPath => EnvironmentUtil.GetEnvironmentVariable("CONFIG_PATH") ?? "/config";
     public static string DatabaseFilePath => Path.Join(ConfigPath, "db.sqlite");
 
-    private static readonly Lazy<DbContextOptions<DavDatabaseContext>> Options = new(() =>
-        new DbContextOptionsBuilder<DavDatabaseContext>()
+    /// <summary>
+    /// Single definition of how the SQLite context is configured, shared by the parameterless
+    /// ctor (via <see cref="Options"/>) and the DI/factory registration in Program.cs.
+    /// </summary>
+    public static void ConfigureOptions(DbContextOptionsBuilder optionsBuilder)
+    {
+        optionsBuilder
             .UseSqlite($"Data Source={DatabaseFilePath}")
             .AddInterceptors(new SqlitePragmaInterceptor())
-            .ReplaceService<IMigrationsSqlGenerator, SqliteMigrationsSqlGenerator<SqliteMigrationsSqlGenerator>>()
-            .Options
-    );
+            .ReplaceService<IMigrationsSqlGenerator, SqliteMigrationsSqlGenerator<SqliteMigrationsSqlGenerator>>();
+    }
+
+    private static readonly Lazy<DbContextOptions<DavDatabaseContext>> Options = new(() =>
+    {
+        var builder = new DbContextOptionsBuilder<DavDatabaseContext>();
+        ConfigureOptions(builder);
+        return builder.Options;
+    });
 
     // database sets
     public DbSet<Account> Accounts => Set<Account>();

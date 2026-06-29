@@ -99,6 +99,7 @@ class Program
             .AddHostedService<DavCleanupService>()
             .AddHostedService<UsenetFileToBlobstoreMigrationService>()
             .AddHostedService<RemoveOrphanedFilesSchedulerService>()
+            .AddDbContextFactory<DavDatabaseContext>(DavDatabaseContext.ConfigureOptions)
             .AddScoped<DavDatabaseContext>()
             .AddScoped<DavDatabaseClient>()
             .AddScoped<DatabaseStore>()
