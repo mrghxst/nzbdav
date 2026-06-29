@@ -1,118 +1,76 @@
+/** Builds a FormData body from a list of [name, value] entries. */
+function form(...entries: [string, string | Blob, string?][]): FormData {
+    const data = new FormData();
+    for (const [name, value, filename] of entries) {
+        if (filename !== undefined) data.append(name, value as Blob, filename);
+        else data.append(name, value);
+    }
+    return data;
+}
+
+/**
+ * Single entry point for every backend call: prepends BACKEND_URL, attaches the
+ * shared api key, and converts a non-2xx response into an Error whose message is
+ * prefixed with `errorPrefix` and suffixed with the backend's reported error.
+ */
+async function call(path: string, errorPrefix: string, init?: RequestInit): Promise<any> {
+    const response = await fetch(process.env.BACKEND_URL + path, {
+        ...init,
+        headers: {
+            "x-api-key": process.env.FRONTEND_BACKEND_API_KEY || "",
+            ...(init?.headers ?? {}),
+        },
+    });
+
+    if (!response.ok) {
+        throw new Error(`${errorPrefix}: ${(await response.json()).error}`);
+    }
+
+    return response.json();
+}
+
 class BackendClient {
     public async isOnboarding(): Promise<boolean> {
-        const url = process.env.BACKEND_URL + "/api/is-onboarding";
-
-        const response = await fetch(url, {
+        const data = await call("/api/is-onboarding", "Failed to fetch onboarding status", {
             method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                "x-api-key": process.env.FRONTEND_BACKEND_API_KEY || ""
-            }
+            headers: { "Content-Type": "application/json" },
         });
-
-        if (!response.ok) {
-            throw new Error(`Failed to fetch onboarding status: ${(await response.json()).error}`);
-        }
-
-        const data = await response.json();
         return data.isOnboarding;
     }
 
     public async createAccount(username: string, password: string): Promise<boolean> {
-        const url = process.env.BACKEND_URL + "/api/create-account";
-
-        const response = await fetch(url, {
+        const data = await call("/api/create-account", "Failed to create account", {
             method: "POST",
-            headers: {
-                "x-api-key": process.env.FRONTEND_BACKEND_API_KEY || ""
-            },
-            body: (() => {
-                const form = new FormData();
-                form.append("username", username);
-                form.append("password", password);
-                form.append("type", "admin");
-                return form;
-            })()
+            body: form(["username", username], ["password", password], ["type", "admin"]),
         });
-
-        if (!response.ok) {
-            throw new Error(`Failed to create account: ${(await response.json()).error}`);
-        }
-
-        const data = await response.json();
         return data.status;
     }
 
     public async authenticate(username: string, password: string): Promise<boolean> {
-        const url = process.env.BACKEND_URL + "/api/authenticate";
-
-        const apiKey = process.env.FRONTEND_BACKEND_API_KEY || "";
-        const response = await fetch(url, {
+        const data = await call("/api/authenticate", "Failed to authenticate", {
             method: "POST",
-            headers: { "x-api-key": apiKey },
-            body: (() => {
-                const form = new FormData();
-                form.append("username", username);
-                form.append("password", password);
-                form.append("type", "admin");
-                return form;
-            })()
+            body: form(["username", username], ["password", password], ["type", "admin"]),
         });
-
-        if (!response.ok) {
-            throw new Error(`Failed to authenticate: ${(await response.json()).error}`);
-        }
-
-        const data = await response.json();
         return data.authenticated;
     }
 
     public async getQueue(limit: number): Promise<QueueResponse> {
-        const url = process.env.BACKEND_URL + `/api?mode=queue&limit=${limit}`;
-
-        const apiKey = process.env.FRONTEND_BACKEND_API_KEY || "";
-        const response = await fetch(url, { headers: { "x-api-key": apiKey } });
-        if (!response.ok) {
-            throw new Error(`Failed to get queue: ${(await response.json()).error}`);
-        }
-
-        const data = await response.json();
+        const data = await call(`/api?mode=queue&limit=${limit}`, "Failed to get queue");
         return data.queue;
     }
 
     public async getHistory(limit: number): Promise<HistoryResponse> {
-        const url = process.env.BACKEND_URL + `/api?mode=history&pageSize=${limit}`;
-
-        const apiKey = process.env.FRONTEND_BACKEND_API_KEY || "";
-        const response = await fetch(url, { headers: { "x-api-key": apiKey } });
-        if (!response.ok) {
-            throw new Error(`Failed to get history: ${(await response.json()).error}`);
-        }
-
-        const data = await response.json();
+        const data = await call(`/api?mode=history&pageSize=${limit}`, "Failed to get history");
         return data.history;
     }
 
     public async addNzb(nzbFile: File): Promise<string> {
         var config = await this.getConfig(["api.manual-category"]);
         var category = config.find(item => item.configName === "api.manual-category")?.configValue || "uncategorized";
-        const url = process.env.BACKEND_URL + `/api?mode=addfile&cat=${category}&priority=0&pp=0`;
-
-        const apiKey = process.env.FRONTEND_BACKEND_API_KEY || "";
-        const response = await fetch(url, {
+        const data = await call(`/api?mode=addfile&cat=${category}&priority=0&pp=0`, "Failed to add nzb file", {
             method: "POST",
-            headers: { "x-api-key": apiKey },
-            body: (() => {
-                const form = new FormData();
-                form.append("nzbFile", nzbFile, nzbFile.name);
-                return form;
-            })()
+            body: form(["nzbFile", nzbFile, nzbFile.name]),
         });
-
-        if (!response.ok) {
-            throw new Error(`Failed to add nzb file: ${(await response.json()).error}`);
-        }
-        const data = await response.json();
         if (!data.nzo_ids || data.nzo_ids.length != 1) {
             throw new Error(`Failed to add nzb file: unexpected response format`);
         }
@@ -120,110 +78,41 @@ class BackendClient {
     }
 
     public async listWebdavDirectory(directory: string): Promise<DirectoryItem[]> {
-        const url = process.env.BACKEND_URL + "/api/list-webdav-directory";
-
-        const apiKey = process.env.FRONTEND_BACKEND_API_KEY || "";
-        const response = await fetch(url, {
+        const data = await call("/api/list-webdav-directory", "Failed to list webdav directory", {
             method: "POST",
-            headers: { "x-api-key": apiKey },
-            body: (() => {
-                const form = new FormData();
-                form.append("directory", directory);
-                return form;
-            })()
+            body: form(["directory", directory]),
         });
-
-        if (!response.ok) {
-            throw new Error(`Failed to list webdav directory: ${(await response.json()).error}`);
-        }
-        const data = await response.json();
         return data.items;
     }
 
     public async getConfig(keys: string[]): Promise<ConfigItem[]> {
-        const url = process.env.BACKEND_URL + "/api/get-config";
-
-        const apiKey = process.env.FRONTEND_BACKEND_API_KEY || "";
-        const response = await fetch(url, {
+        const data = await call("/api/get-config", "Failed to get config items", {
             method: "POST",
-            headers: { "x-api-key": apiKey },
-            body: (() => {
-                const form = new FormData();
-                for (const key of keys) {
-                    form.append("config-keys", key);
-                }
-                return form;
-            })()
+            body: form(...keys.map(key => ["config-keys", key] as [string, string])),
         });
-
-        if (!response.ok) {
-            throw new Error(`Failed to get config items: ${(await response.json()).error}`);
-        }
-        const data = await response.json();
         return data.configItems || [];
     }
 
     public async updateConfig(configItems: ConfigItem[]): Promise<boolean> {
-        const url = process.env.BACKEND_URL + "/api/update-config";
-
-        const apiKey = process.env.FRONTEND_BACKEND_API_KEY || "";
-        const response = await fetch(url, {
+        const data = await call("/api/update-config", "Failed to update config items", {
             method: "POST",
-            headers: { "x-api-key": apiKey },
-            body: (() => {
-                const form = new FormData();
-                for (const item of configItems) {
-                    form.append(item.configName, item.configValue);
-                }
-                return form;
-            })()
+            body: form(...configItems.map(item => [item.configName, item.configValue] as [string, string])),
         });
-
-        if (!response.ok) {
-            throw new Error(`Failed to update config items: ${(await response.json()).error}`);
-        }
-        const data = await response.json();
         return data.status;
     }
 
     public async getHealthCheckQueue(pageSize?: number): Promise<HealthCheckQueueResponse> {
-        let url = process.env.BACKEND_URL + "/api/get-health-check-queue";
-
-        if (pageSize !== undefined) {
-            url += `?pageSize=${pageSize}`;
-        }
-
-        const apiKey = process.env.FRONTEND_BACKEND_API_KEY || "";
-        const response = await fetch(url, {
+        const query = pageSize !== undefined ? `?pageSize=${pageSize}` : "";
+        return await call(`/api/get-health-check-queue${query}`, "Failed to get health check queue", {
             method: "GET",
-            headers: { "x-api-key": apiKey }
         });
-
-        if (!response.ok) {
-            throw new Error(`Failed to get health check queue: ${(await response.json()).error}`);
-        }
-        const data = await response.json();
-        return data;
     }
 
     public async getHealthCheckHistory(pageSize?: number): Promise<HealthCheckHistoryResponse> {
-        let url = process.env.BACKEND_URL + "/api/get-health-check-history";
-
-        if (pageSize !== undefined) {
-            url += `?pageSize=${pageSize}`;
-        }
-
-        const apiKey = process.env.FRONTEND_BACKEND_API_KEY || "";
-        const response = await fetch(url, {
+        const query = pageSize !== undefined ? `?pageSize=${pageSize}` : "";
+        return await call(`/api/get-health-check-history${query}`, "Failed to get health check history", {
             method: "GET",
-            headers: { "x-api-key": apiKey }
         });
-
-        if (!response.ok) {
-            throw new Error(`Failed to get health check history: ${(await response.json()).error}`);
-        }
-        const data = await response.json();
-        return data;
     }
 }
 

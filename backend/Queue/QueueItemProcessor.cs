@@ -60,7 +60,7 @@ public class QueueItemProcessor(
         {
             try
             {
-                Log.Error($"Failed to process job, `{queueItem.JobName}` -- {e.Message}");
+                Log.Error(e, "Failed to process job `{JobName}`. Will retry.", queueItem.JobName);
                 dbClient.Ctx.ClearChangeTracker();
                 queueItem.PauseUntil = DateTime.Now.AddMinutes(1);
                 dbClient.Ctx.QueueItems.Attach(queueItem);
@@ -85,7 +85,8 @@ public class QueueItemProcessor(
             }
             catch (Exception ex)
             {
-                Log.Error(e, ex.Message);
+                Log.Error(ex, "Failed to record failed job `{JobName}` in history (original error: {OriginalError}).",
+                    queueItem.JobName, e.Message);
             }
         }
     }

@@ -7,3 +7,11 @@
 /.react-router/
 /build/
 /dist-node/
+
+# tsc emit alongside sources (the sources are .ts/.tsx; these are generated)
+/server.js
+/server.d.ts
+/vite.config.js
+/vite.config.d.ts
+/react-router.config.js
+/react-router.config.d.ts
