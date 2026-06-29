@@ -23,6 +23,15 @@ public sealed class DavDatabaseClient(DavDatabaseContext ctx)
             .ToListAsync();
     }
 
+    // Resolves a persisted item by its absolute virtual path in a single indexed lookup,
+    // instead of one query per path segment. Returns null for synthetic items that have no
+    // stored row (empty category folders, .ids children, the readme, etc.), in which case
+    // callers fall back to walking the collection hierarchy.
+    public Task<DavItem?> GetItemByPathAsync(string path, CancellationToken ct = default)
+    {
+        return ctx.Items.FirstOrDefaultAsync(x => x.Path == path, ct);
+    }
+
     // directory
     public Task<List<DavItem>> GetDirectoryChildrenAsync(Guid dirId, CancellationToken ct = default)
     {

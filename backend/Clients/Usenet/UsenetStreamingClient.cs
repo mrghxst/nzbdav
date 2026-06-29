@@ -7,7 +7,7 @@ namespace NzbWebDAV.Clients.Usenet;
 public class UsenetStreamingClient : WrappingNntpClient
 {
     public UsenetStreamingClient(ConfigManager configManager, WebsocketManager websocketManager)
-        : base(CreateDownloadingNntpClient(configManager, websocketManager))
+        : base(CreateStreamingPipeline(configManager, websocketManager))
     {
         // when config changes, create a new MultiProviderClient to use instead.
         configManager.OnConfigChanged += (_, configEventArgs) =>
@@ -16,9 +16,20 @@ public class UsenetStreamingClient : WrappingNntpClient
             if (!configEventArgs.ChangedConfig.ContainsKey(ConfigKeys.UsenetProviders)) return;
 
             // update the connection-pool according to the new config
-            var newUsenetClient = CreateDownloadingNntpClient(configManager, websocketManager);
+            var newUsenetClient = CreateStreamingPipeline(configManager, websocketManager);
             ReplaceUnderlyingClient(newUsenetClient);
         };
+    }
+
+    // The yEnc-header cache sits at the top of the pipeline so a cache hit skips the download
+    // semaphore and the provider/connection pools entirely.
+    private static HeaderCachingNntpClient CreateStreamingPipeline
+    (
+        ConfigManager configManager,
+        WebsocketManager websocketManager
+    )
+    {
+        return new HeaderCachingNntpClient(CreateDownloadingNntpClient(configManager, websocketManager));
     }
 
     private static DownloadingNntpClient CreateDownloadingNntpClient

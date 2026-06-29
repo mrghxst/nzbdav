@@ -122,30 +122,7 @@ public class DatabaseStoreCollection(
 
     private IStoreItem GetItem(DavItem davItem)
     {
-        return davItem.SubType switch
-        {
-            DavItem.ItemSubType.IdsRoot =>
-                new DatabaseStoreIdsCollection(
-                    davItem.Name, "", httpContext, dbClient, usenetClient, configManager),
-            DavItem.ItemSubType.NzbsRoot =>
-                new DatabaseStoreWatchFolder(
-                    davItem, httpContext, dbClient, configManager, usenetClient, queueManager, websocketManager),
-            DavItem.ItemSubType.Directory or DavItem.ItemSubType.ContentRoot  =>
-                new DatabaseStoreCollection(
-                    davItem, httpContext, dbClient, configManager, usenetClient, queueManager, websocketManager),
-            DavItem.ItemSubType.SymlinkRoot =>
-                new DatabaseStoreSymlinkCollection(
-                    davItem, dbClient, configManager),
-            DavItem.ItemSubType.NzbFile =>
-                new DatabaseStoreNzbFile(
-                    davItem, httpContext, dbClient, usenetClient, configManager),
-            DavItem.ItemSubType.RarFile =>
-                new DatabaseStoreRarFile(
-                    davItem, httpContext, dbClient, usenetClient, configManager),
-            DavItem.ItemSubType.MultipartFile =>
-                new DatabaseStoreMultipartFile(
-                    davItem, httpContext, dbClient, usenetClient, configManager),
-            _ => throw new ArgumentException("Unrecognized directory child type.")
-        };
+        return DatabaseStoreItemFactory.Create(
+            davItem, httpContext, dbClient, configManager, usenetClient, queueManager, websocketManager);
     }
 }

@@ -138,6 +138,9 @@ public sealed class DavDatabaseContext() : DbContext(Options.Value)
             e.HasIndex(i => new { i.ParentId, i.Name })
                 .IsUnique();
 
+            // Supports the single-query path lookup in DavDatabaseClient.GetItemByPathAsync.
+            e.HasIndex(i => i.Path);
+
             e.HasIndex(i => new { i.IdPrefix, i.Type });
 
             e.HasIndex(i => new { i.Type, i.HistoryItemId, i.NextHealthCheck, i.ReleaseDate, i.Id });
