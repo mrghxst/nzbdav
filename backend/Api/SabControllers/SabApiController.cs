@@ -11,6 +11,7 @@ using NzbWebDAV.Api.SabControllers.GetStatus;
 using NzbWebDAV.Api.SabControllers.GetVersion;
 using NzbWebDAV.Api.SabControllers.RemoveFromHistory;
 using NzbWebDAV.Api.SabControllers.RemoveFromQueue;
+using NzbWebDAV.Auth;
 using NzbWebDAV.Config;
 using NzbWebDAV.Database;
 using NzbWebDAV.Extensions;
@@ -114,17 +115,7 @@ public class SabApiController(
         public Task<IActionResult> HandleRequest()
         {
             if (RequiresAuthentication)
-            {
-                var apiKey = httpContext.GetRequestApiKey();
-                var isValidKey = apiKey?.IsAny(
-                    configManager.GetApiKey(),
-                    EnvironmentUtil.GetRequiredVariable("FRONTEND_BACKEND_API_KEY")
-                );
-                if (!isValidKey.HasValue)
-                    throw new UnauthorizedAccessException("API Key Required");
-                if (!isValidKey.Value)
-                    throw new UnauthorizedAccessException("API Key Incorrect");
-            }
+                ApiKeyValidator.Validate(httpContext, configManager);
 
             return Handle();
         }
