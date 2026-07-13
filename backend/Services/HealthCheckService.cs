@@ -141,9 +141,17 @@ public class HealthCheckService : BackgroundService
             _ = _websocketManager.SendMessage(WebsocketTopic.HealthItemProgress, $"{davItem.Id}|100");
             _ = _websocketManager.SendMessage(WebsocketTopic.HealthItemProgress, $"{davItem.Id}|done");
 
-            // update the database
-            davItem.LastHealthCheck = DateTimeOffset.UtcNow;
-            davItem.NextHealthCheck = davItem.ReleaseDate + 2 * (davItem.LastHealthCheck - davItem.ReleaseDate);
+            // update the database.
+            // the next check is scheduled so the interval doubles with the item's age since release.
+            // clamp to a minimum interval: a null release-date (zero-segment item) or a future-dated
+            // article header would otherwise schedule the item in the past and hot-loop the service.
+            var utcNow = DateTimeOffset.UtcNow;
+            var minimumNextHealthCheck = utcNow + TimeSpan.FromHours(1);
+            var nextHealthCheck = davItem.ReleaseDate + 2 * (utcNow - davItem.ReleaseDate);
+            davItem.LastHealthCheck = utcNow;
+            davItem.NextHealthCheck = nextHealthCheck == null || nextHealthCheck < minimumNextHealthCheck
+                ? minimumNextHealthCheck
+                : nextHealthCheck;
             await RecordHealthResult(dbClient, davItem,
                 HealthCheckResult.HealthResult.Healthy,
                 HealthCheckResult.RepairAction.None,

@@ -9,7 +9,9 @@ namespace NzbWebDAV.Websocket;
 
 public class WebsocketManager
 {
-    private readonly HashSet<WebSocket> _authenticatedSockets = [];
+    // each socket gets a send-lock: WebSocket.SendAsync forbids overlapping sends,
+    // and broadcasts can be triggered concurrently from many threads.
+    private readonly Dictionary<WebSocket, SemaphoreSlim> _authenticatedSockets = [];
     private readonly Dictionary<WebsocketTopic, string> _lastMessage = new();
 
     public async Task HandleRoute(HttpContext context)
@@ -25,15 +27,16 @@ public class WebsocketManager
             }
 
             // mark the socket as authenticated
+            var sendLock = new SemaphoreSlim(1, 1);
             lock (_authenticatedSockets)
-                _authenticatedSockets.Add(webSocket);
+                _authenticatedSockets.Add(webSocket, sendLock);
 
             // send current state for all topics
             List<KeyValuePair<WebsocketTopic, string>>? lastMessage;
             lock (_lastMessage) lastMessage = _lastMessage.ToList();
             foreach (var message in lastMessage)
                 if (message.Key.Type == WebsocketTopic.TopicType.State)
-                    await SendMessage(webSocket, message.Key, message.Value).ConfigureAwait(false);
+                    await SendMessage(webSocket, sendLock, message.Key, message.Value).ConfigureAwait(false);
 
             // wait for the socket to disconnect
             await WaitForDisconnected(webSocket).ConfigureAwait(false);
@@ -54,11 +57,17 @@ public class WebsocketManager
     public Task SendMessage(WebsocketTopic topic, string message)
     {
         lock (_lastMessage) _lastMessage[topic] = message;
-        List<WebSocket>? authenticatedSockets;
-        lock (_authenticatedSockets) authenticatedSockets = _authenticatedSockets.ToList();
+        List<KeyValuePair<WebSocket, SemaphoreSlim>> authenticatedSockets;
+        lock (_authenticatedSockets)
+        {
+            // don't pay for serialization when no ui client is listening
+            if (_authenticatedSockets.Count == 0) return Task.CompletedTask;
+            authenticatedSockets = _authenticatedSockets.ToList();
+        }
+
         var topicMessage = new TopicMessage(topic, message);
         var bytes = new ArraySegment<byte>(Encoding.UTF8.GetBytes(topicMessage.ToJson()));
-        return Task.WhenAll(authenticatedSockets.Select(x => SendMessage(x, bytes)));
+        return Task.WhenAll(authenticatedSockets.Select(x => SendMessage(x.Key, x.Value, bytes)));
     }
 
     /// <summary>
@@ -103,25 +112,35 @@ public class WebsocketManager
     /// Send a message to a connected websocket.
     /// </summary>
     /// <param name="socket">The websocket to send the message to.</param>
+    /// <param name="sendLock">The socket's send-lock, ensuring sends never overlap.</param>
     /// <param name="topic">The topic of the message to send</param>
     /// <param name="message">The message to send</param>
-    private static async Task SendMessage(WebSocket socket, WebsocketTopic topic, string message)
+    private static async Task SendMessage(WebSocket socket, SemaphoreSlim sendLock, WebsocketTopic topic, string message)
     {
         var topicMessage = new TopicMessage(topic, message);
         var bytes = new ArraySegment<byte>(Encoding.UTF8.GetBytes(topicMessage.ToJson()));
-        await SendMessage(socket, bytes).ConfigureAwait(false);
+        await SendMessage(socket, sendLock, bytes).ConfigureAwait(false);
     }
 
     /// <summary>
     /// Send a message to a connected websocket.
     /// </summary>
     /// <param name="socket">The websocket to send the message to.</param>
+    /// <param name="sendLock">The socket's send-lock, ensuring sends never overlap.</param>
     /// <param name="message">The message to send.</param>
-    private static async Task SendMessage(WebSocket socket, ArraySegment<byte> message)
+    private static async Task SendMessage(WebSocket socket, SemaphoreSlim sendLock, ArraySegment<byte> message)
     {
         try
         {
-            await socket.SendAsync(message, WebSocketMessageType.Text, true, SigtermUtil.GetCancellationToken()).ConfigureAwait(false);
+            await sendLock.WaitAsync(SigtermUtil.GetCancellationToken()).ConfigureAwait(false);
+            try
+            {
+                await socket.SendAsync(message, WebSocketMessageType.Text, true, SigtermUtil.GetCancellationToken()).ConfigureAwait(false);
+            }
+            finally
+            {
+                sendLock.Release();
+            }
         }
         catch (Exception e)
         {

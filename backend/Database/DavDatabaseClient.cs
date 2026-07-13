@@ -11,7 +11,8 @@ public sealed class DavDatabaseClient(DavDatabaseContext ctx)
     // file
     public Task<DavItem?> GetFileById(string id)
     {
-        var guid = Guid.Parse(id);
+        // non-guid names (e.g. clients probing /.ids paths) are simply not found
+        if (!Guid.TryParse(id, out var guid)) return Task.FromResult<DavItem?>(null);
         return ctx.Items.Where(i => i.Id == guid).FirstOrDefaultAsync();
     }
 

@@ -1,4 +1,4 @@
-﻿using NzbWebDAV.Config;
+using NzbWebDAV.Config;
 using NzbWebDAV.Models;
 using NzbWebDAV.Websocket;
 
@@ -6,11 +6,22 @@ namespace NzbWebDAV.Clients.Usenet.Connections;
 
 public class ConnectionPoolStats
 {
+    // Pool-changed events fire on every connection borrow/return — hundreds per second under
+    // load. Websocket updates are coalesced: events only update in-memory counters, and a
+    // single flush task emits the latest per-provider stats at most once per interval.
+    // The flush is trailing-edge, so the final state after a burst is always sent.
+    private static readonly TimeSpan FlushInterval = TimeSpan.FromMilliseconds(200);
+
     private readonly int[] _live;
     private readonly int[] _idle;
+    private readonly int[] _latestLive;
+    private readonly int[] _latestIdle;
+    private readonly bool[] _dirty;
     private readonly int _max;
     private int _totalLive;
     private int _totalIdle;
+    private int _flushScheduled; // 0 == false, 1 == true
+    private readonly Lock _lock = new();
     private readonly UsenetProviderConfig _providerConfig;
     private readonly WebsocketManager _websocketManager;
 
@@ -19,6 +30,9 @@ public class ConnectionPoolStats
         var count = providerConfig.Providers.Count;
         _live = new int[count];
         _idle = new int[count];
+        _latestLive = new int[count];
+        _latestIdle = new int[count];
+        _dirty = new bool[count];
         _max = providerConfig.Providers
             .Where(x => x.Type == ProviderType.Pooled)
             .Select(x => x.MaxConnections)
@@ -34,9 +48,13 @@ public class ConnectionPoolStats
 
         void OnEvent(object? _, ConnectionPoolChangedEventArgs args)
         {
-            if (_providerConfig.Providers[providerIndex].Type == ProviderType.Pooled)
+            lock (_lock)
             {
-                lock (this)
+                _latestLive[providerIndex] = args.Live;
+                _latestIdle[providerIndex] = args.Idle;
+                _dirty[providerIndex] = true;
+
+                if (_providerConfig.Providers[providerIndex].Type == ProviderType.Pooled)
                 {
                     _live[providerIndex] = args.Live;
                     _idle[providerIndex] = args.Idle;
@@ -45,9 +63,33 @@ public class ConnectionPoolStats
                 }
             }
 
-            var message = $"{providerIndex}|{args.Live}|{args.Idle}|{_totalLive}|{_max}|{_totalIdle}";
-            _websocketManager.SendMessage(WebsocketTopic.UsenetConnections, message);
+            if (Interlocked.CompareExchange(ref _flushScheduled, 1, 0) == 0)
+                _ = FlushAfterDelayAsync();
         }
+    }
+
+    private async Task FlushAfterDelayAsync()
+    {
+        await Task.Delay(FlushInterval).ConfigureAwait(false);
+
+        // allow a new flush to be scheduled *before* taking the snapshot,
+        // so events arriving after the snapshot are never lost.
+        Volatile.Write(ref _flushScheduled, 0);
+
+        List<string> messages;
+        lock (_lock)
+        {
+            messages = new List<string>();
+            for (var i = 0; i < _dirty.Length; i++)
+            {
+                if (!_dirty[i]) continue;
+                _dirty[i] = false;
+                messages.Add($"{i}|{_latestLive[i]}|{_latestIdle[i]}|{_totalLive}|{_max}|{_totalIdle}");
+            }
+        }
+
+        foreach (var message in messages)
+            _ = _websocketManager.SendMessage(WebsocketTopic.UsenetConnections, message);
     }
 
     public sealed class ConnectionPoolChangedEventArgs(int live, int idle, int max) : EventArgs

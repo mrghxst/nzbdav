@@ -1,4 +1,5 @@
-﻿using NzbWebDAV.Config;
+﻿using System.Collections.Concurrent;
+using NzbWebDAV.Config;
 using NzbWebDAV.Database.Models;
 using NzbWebDAV.Extensions;
 
@@ -9,7 +10,8 @@ namespace NzbWebDAV.Utils;
 /// </summary>
 public static class OrganizedLinksUtil
 {
-    private static readonly Dictionary<Guid, string> Cache = new();
+    // Concurrent because health-check repairs and maintenance tasks can walk the library at the same time.
+    private static readonly ConcurrentDictionary<Guid, string> Cache = new();
 
     /// <summary>
     /// Searches organized media library for a symlink or strm pointing to the given target
@@ -62,7 +64,9 @@ public static class OrganizedLinksUtil
         string? result = null;
         foreach (var davItemLink in GetLibraryDavItemLinks(configManager))
         {
-            Cache[targetDavItem.Id] = davItemLink.LinkPath;
+            // cache every link found during the walk under its own dav-item id,
+            // so subsequent lookups for other items skip the full library scan.
+            Cache[davItemLink.DavItemId] = davItemLink.LinkPath;
             if (davItemLink.DavItemId == targetDavItem.Id)
                 result = davItemLink.LinkPath;
         }
@@ -105,10 +109,12 @@ public static class OrganizedLinksUtil
         targetPath = targetPath.StartsWith('/') ? targetPath : $"/{targetPath}";
         if (!targetPath.StartsWith("/.ids")) return null;
         var guid = Path.GetFileNameWithoutExtension(targetPath);
+        // a foreign/hand-made symlink under the mount dir must not abort the library walk
+        if (!Guid.TryParse(guid, out var davItemId)) return null;
         return new DavItemLink()
         {
             LinkPath = symlinkInfo.SymlinkPath,
-            DavItemId = Guid.Parse(guid),
+            DavItemId = davItemId,
             SymlinkOrStrmInfo = symlinkInfo
         };
     }
@@ -116,13 +122,16 @@ public static class OrganizedLinksUtil
     private static DavItemLink? GetDavItemLink(SymlinkAndStrmUtil.StrmInfo strmInfo)
     {
         var targetUrl = strmInfo.TargetUrl;
-        var absolutePath = new Uri(targetUrl).AbsolutePath;
+        // a malformed strm file must not abort the library walk
+        if (!Uri.TryCreate(targetUrl, UriKind.Absolute, out var uri)) return null;
+        var absolutePath = uri.AbsolutePath;
         if (!absolutePath.StartsWith("/view/.ids")) return null;
         var guid = Path.GetFileNameWithoutExtension(absolutePath);
+        if (!Guid.TryParse(guid, out var davItemId)) return null;
         return new DavItemLink()
         {
             LinkPath = strmInfo.StrmPath,
-            DavItemId = Guid.Parse(guid),
+            DavItemId = davItemId,
             SymlinkOrStrmInfo = strmInfo
         };
     }
